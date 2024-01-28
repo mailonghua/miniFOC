@@ -1,0 +1,69 @@
+// Open loop motor control example
+// #include "ExampleSpace.h"
+// #include "Config.h"
+#include <SimpleFOC.h>
+// BLDC motor & driver instance
+// BLDCMotor( pp number , phase resistance)
+static BLDCMotor motor = BLDCMotor(7); 
+static BLDCDriver3PWM driver = BLDCDriver3PWM(5, 6, 7, 4);
+// static InlineCurrentSense currentSense = InlineCurrentSense(0.01,50,CURRENT_SENSOR_A,CURRENT_SENSOR_B);
+//target
+static float target_velocity = 0;
+
+// instantiate the commander
+static Commander command = Commander(Serial);
+static void doTarget(char* cmd) { command.scalar(&target_velocity, cmd); }
+static void doLimit(char* cmd) { command.scalar(&motor.voltage_limit, cmd); }
+static uint32_t last_millis = 0;
+
+
+//获得电流传感器
+static void GetPrintCurrentSense()
+{
+    // PhaseCurrent_s currents = currentSense.getPhaseCurrents();
+    // float current_magnitude = currentSense.getDCCurrent();
+    // Serial.print(currents.a*1000); // milli Amps
+    // Serial.print("\t");
+    // Serial.print(currents.b*1000); // milli Amps
+    // Serial.print("\t");
+    // Serial.print(currents.c*1000); // milli Amps
+    // Serial.print("\t");
+    // Serial.println(current_magnitude*1000); // milli Amps
+}
+
+void setup() 
+{
+  // driver config
+  // currentSense.init();
+  //Serial.printf("Current Sense ready...\n");
+  Serial.begin(115200); 
+  // power supply voltage [V]
+  driver.voltage_power_supply = 24;
+  driver.voltage_limit = 6;
+  driver.init();
+  // link the motor and the driver
+  motor.linkDriver(&driver);
+  motor.voltage_limit = 3;   // Volts 【limiting motor current】
+  motor.controller = MotionControlType::velocity_openloop;
+  motor.init();
+
+  // add target command T
+  command.add('T', doTarget, "target velocity");
+  command.add('L', doLimit, "voltage limit");
+  Serial.println("Motor ready!");
+  Serial.println("Set target velocity [rad/s]...");
+
+  _delay(1000);
+}
+
+void loop() 
+{
+  motor.move(target_velocity);
+  // user communication
+  command.run();
+  // if(millis() - last_millis > sleepms)
+  // {
+  //   last_millis = millis();
+  //   GetPrintCurrentSense();
+  // }
+}
