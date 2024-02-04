@@ -15,6 +15,10 @@
 #define CAN_TX GPIO_NUM_10
 #define CAN_RX GPIO_NUM_11
 
+//buzzer
+#define BUZZER_PIN 10
+
+#define EEPROM_MAX_SIZE 128
 #define STASSID "Xiaomi_Mailonghua"
 #define STAPSK "mlh8823727"
 
