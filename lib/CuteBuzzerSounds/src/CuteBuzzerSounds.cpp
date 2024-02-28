@@ -182,8 +182,21 @@ void CuteBuzzerSoundsClass::play(int soundName){
       _tone( notes[i], wait, 0);          //tone(pin,frequency,duration)
     }
     break;
-
+  case S_START:
+    tone(buzzerPin,8500);
+    delay(180);
+    tone(buzzerPin,3000);
+    delay(200);
+    tone(buzzerPin,2500);
+    delay(200);
+    tone(buzzerPin,4000);
+    delay(200);
+    noTone(buzzerPin);
+    break;
+  case S_ERROR:
+    break;
   }
+
 }
 
 CuteBuzzerSoundsClass cute;

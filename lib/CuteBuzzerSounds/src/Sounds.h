@@ -131,6 +131,8 @@
 #define S_FART3			18
 #define PIRATES 19
 #define S_JUMP 20
+#define S_START 21
+#define S_ERROR 22
 
 
 const int songspeed = 1;

@@ -5,7 +5,7 @@
 #endif
 #include "Sounds.h"
 
-#define debug true
+//#define debug true
 
 
 class CuteBuzzerSoundsClass

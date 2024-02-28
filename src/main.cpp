@@ -103,29 +103,29 @@ void loop()
 }
 #else
 #include "HAL/HAL.h"
-void start_user_task(){
-  
-    //1.启动FOC算法-循环频率
-    xTaskCreate([](void*para){ //使用了匿名函数
-        while (1)
-        {
-          INIT_TASK_TIME(2);//2ms周期进行循环执行FOC
-          HAL::Motor_Update(NULL);
-          WAIT_TASK_TIME();
-        }
-    },"miniFOC",2048,NULL,1,NULL);
-    
+void start_user_task()
+{
+
+  // 1.启动FOC算法-循环频率
+  xTaskCreate([](void *para) { // 使用了匿名函数
+    INFO("FOC loop task start success...\n");
+    while (1)
+    {
+      INIT_TASK_TIME(1); // 2ms周期进行循环执行FOC
+      HAL::Motor_Update(NULL);
+      WAIT_TASK_TIME();
+    }
+  },
+              "miniFOC", 2048, NULL, 1, NULL);
 }
 void setup()
 {
-    Serial.begin(115200);
-    HAL::HAL_Init();
-    start_user_task();
-    
+  Serial.begin(115200);
+  HAL::HAL_Init();
 }
 
 void loop()
 {
-    // HAL::Motor_Update();
+  HAL::Motor_Update(NULL);
 }
 #endif
