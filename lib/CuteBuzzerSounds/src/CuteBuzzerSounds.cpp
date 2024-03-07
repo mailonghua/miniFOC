@@ -195,6 +195,15 @@ void CuteBuzzerSoundsClass::play(int soundName){
     break;
   case S_ERROR:
     break;
+  case S_WIFI_SELECT:
+    tone(buzzerPin,4000);
+    delay(100);
+    noTone(buzzerPin);
+    delay(200);
+    tone(buzzerPin,4000);
+    delay(150);
+    noTone(buzzerPin);
+    break;
   }
 
 }

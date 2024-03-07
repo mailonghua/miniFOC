@@ -21,7 +21,8 @@ namespace HAL
     uint16_t Rotor_Machinery_Angle; // 转子机械角度
     int16_t Rotor_Speed;            // 转子速度
     uint16_t Toque;                 // 转矩
-    uint16_t Reserve;               // 预留
+    uint8_t tempetature;          //电机温度
+    uint8_t state;               // 预留
   } CAN_Recv_t;
   typedef union
   {

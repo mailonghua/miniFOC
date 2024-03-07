@@ -133,6 +133,7 @@
 #define S_JUMP 20
 #define S_START 21
 #define S_ERROR 22
+#define S_WIFI_SELECT 23
 
 
 const int songspeed = 1;

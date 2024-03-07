@@ -17,8 +17,15 @@
 #define MOTOR_CAN_ID (0x300)
 #define MOTOR_MAX_CURRENT_IQ (900) // ma
 
+// INPUT
+#define KEY GPIO_NUM_21
+#define KEY_DETECT_THREAD_DELAY (50)
+#define SELECT_CAN_ID_DELAY_MAX (10) // 20*KEY_DETECT_THREAD_DELAY = 1000ms，小于1秒的按压都是选择CAN
+#define SELECT_OPEN_WIFI_MIN (20)    //
+#define SELECT_CLEAR_NVS_MIN (50)    //
 // buzzer
 #define BUZZER_PIN 20
+#define STATUS_LED 19
 
 #define EEPROM_MAX_SIZE 128
 #define STASSID "Xiaomi_Mailonghua"
@@ -31,7 +38,9 @@
     2:TCP[not use]
 */
 #define VOFA_TRANSMISSION_TYPE (1)
-
 #define VOFA_UDP_LOCAL_PORT 2333
 #define VOFA_UDP_REMOTE_PORT 2334
+
+// 控制用simpleFOC Studio的串口输出控制
+#define SIMPLEFOC_DEBUG_ENABLE 0
 #endif

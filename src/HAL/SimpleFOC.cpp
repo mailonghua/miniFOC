@@ -2,6 +2,7 @@
 #include "HAL.h"
 #include <SimpleFOC.h>
 #include <algorithm>
+#include "esp32-hal.h" // 引入ESP32 HAL库
 
 static MagneticSensorI2C as5600 = MagneticSensorI2C(AS5600_I2C);
 static BLDCMotor motor = BLDCMotor(7);
@@ -84,7 +85,7 @@ static void update_receive_can_target()
       if ((recv_can_target <= MOTOR_MAX_CURRENT_IQ) && (recv_can_target > -MOTOR_MAX_CURRENT_IQ))
       {
         INFO("Recv CAN target current :%f\n", recv_can_target / 1000.0);
-         motor.target = recv_can_target / 1000.0;
+        motor.target = recv_can_target / 1000.0;
       }
       else
       {
@@ -104,11 +105,13 @@ void foc_current_init(int direction = -1, float angle = -1)
   motor.torque_controller = TorqueControlType::foc_current; // foc电流力矩控制
   motor.controller = MotionControlType::torque;
   // 电流环的q和d的PID
-  motor.PID_current_q.P = 23; // 5;
-  motor.PID_current_q.I = 23; // 300;
+  motor.PID_current_q.P = 30; // 5;
+  motor.PID_current_q.I = 25; // 300;
+  motor.PID_current_q.D = 1;  // 添加了D后，打开后电机,在打开串口条件假，启动会有转动
   motor.PID_current_d.P = 18; // 5;
-  motor.PID_current_d.I = 20; // 300;
-  // 低通滤波器
+  motor.PID_current_d.I = 30; // 300;
+  motor.PID_current_d.D = 1;  // 打开后电机启动，在打开串口条件假，会有异常转动
+  //  低通滤波器
   motor.LPF_current_q.Tf = 0.5;
   motor.LPF_current_d.Tf = 0.5;
   motor.current_limit = 1.0;
@@ -160,6 +163,135 @@ void foc_speed_init()
 void foc_position_init()
 {
 }
+/**************机械角度的转换********************/
+
+// 将0到2π的弧度转换为16位无符号整数
+// uint16_t radiansToUint16(float radians)
+// {
+//   // 确保弧度在0到2π之间
+//   while (radians < 0)
+//   {
+//     radians += TWO_PI;
+//     INFOLN("FeedBack angle exceeded MAX angle");
+//   }
+
+//   while (radians >= TWO_PI)
+//   {
+//     radians -= TWO_PI;
+//     INFOLN("FeedBack angle less than min angle");
+//   }
+
+//   // 映射到0到65535
+//   uint16_t value = static_cast<uint16_t>((radians / TWO_PI) * 65535);
+//   return value;
+// }
+// // 将16位无符号整数转换回弧度
+// float uint16ToRadians(uint16_t value)
+// {
+//   // 映射回0到2π
+//   float radians = (value / 65535.0f) * (TWO_PI);
+//   return radians;
+// }
+// 将弧度映射到uint16_t，保留两位小数
+uint16_t radiansToUint16(float radian)
+{
+  // 将弧度值转换为一个假定的"百分比"形式
+  int32_t scaled = static_cast<int32_t>(radian * 100.0f);
+  // 检查是否溢出
+  if (scaled < -32768 || scaled > 32767)
+  {
+    // ERR("Error[radianToUint16]: Value out of range, cannot be accurately represented.\n");
+    if (scaled > 32767)
+      return 32767;
+    if (scaled < -32768)
+      return -32768;
+  }
+  // 映射到uint16_t的范围
+  return static_cast<uint16_t>(scaled + 32768);
+}
+
+// 将uint16_t映射回弧度，保留两位小数
+float uint16ToRadians(uint16_t value)
+{
+  // 转换回原始的弧度值
+  int32_t scaled = static_cast<int32_t>(value) - 32768;
+  return scaled / 100.0f;
+}
+/**************速度的转换********************/
+// 将浮点速度转换为uint16_t
+uint16_t velocityToUint16(float velocity)
+{
+  // 假定速度范围为-327.68到+327.67，这允许一定的精度
+  // 映射速度到0到65535的范围
+  // 首先，调整速度范围到0到65535
+  float offsetVelocity = velocity + 327.68;
+
+  // 确保调整后的速度在有效范围内
+  if (offsetVelocity < 0)
+  {
+    offsetVelocity = 0;
+    INFOLN("FeedBack velocity less than MAX angle");
+  }
+  if (offsetVelocity > 655.35)
+  {
+    INFOLN("FeedBack velocity exceeded MAX angle");
+    offsetVelocity = 655.35;
+  }
+
+  // 然后，缩放到0到65535
+  uint16_t value = static_cast<uint16_t>(offsetVelocity * 100);
+  return value;
+}
+
+// 将uint16_t转换回浮点速度
+float uint16ToVelocity(uint16_t value)
+{
+  // 将值映射回原始速度范围
+  float velocity = (value / 100.0) - 327.68;
+  return velocity;
+}
+/**************电流的转换********************/
+uint16_t currentToUint16(float current)
+{
+  return static_cast<uint16_t>(current * 1000);
+}
+// 用于打印测试CAN的返回数据是否正常
+void test_can_feedback_data(const HAL::MotorFeedData *data, float electrical_angle, float shaft_velocity, float current_sp)
+{
+  INFOLN("**************MotorData*****************");
+  INFO("Angle Send:%f,Receive:%f\n", electrical_angle,
+       uint16ToRadians(data->Motor_Data.Rotor_Machinery_Angle));
+  INFO("Velocity Send:%f,Receive:%f\n", shaft_velocity,
+       uint16ToVelocity(data->Motor_Data.Rotor_Speed));
+
+  INFO("Current Send:%f,Receive:%f\n", current_sp,
+       (data->Motor_Data.Toque / 1000.f));
+  INFO("Tempetature Send:%d\n", data->Motor_Data.tempetature);
+  INFO("SysStatus Send:%d\n", data->Motor_Data.state);
+}
+// 获取电机的状态
+void HAL::Motor_GetCurrentState(MotorFeedData &data)
+{
+  // ESP32是小端模式，高字节存储在高地址，低字节存储在低地址
+  // motor.electrical_angle;:electrical_angle//是0~2π的角度范围,而shaft_angle是不断累加的值
+  float electrical_angle = motor.shaft_angle;
+  float shaft_velocity = motor.shaft_velocity;
+  float current_sp = motor.current_sp;
+
+  // 1.转子机械角度
+  uint16_t angle = radiansToUint16(electrical_angle); // 放大了1000倍，范围0~2pai
+  data.Motor_Data.Rotor_Machinery_Angle = angle;
+  // 2.转子速度
+  data.Motor_Data.Rotor_Speed = velocityToUint16(shaft_velocity);
+  // 3.实际电流
+  data.Motor_Data.Toque = currentToUint16(current_sp);
+  // 4.MCU温度
+  data.Motor_Data.tempetature = MCU_Internal_Temperature_u8();
+  // 5.系统状态
+  data.Motor_Data.state = getSysState();
+  // test_can_feedback_data(&data, electrical_angle, shaft_velocity, current_sp);
+}
+
 void HAL::Motor_Init()
 {
   // 读取参数
@@ -178,7 +310,10 @@ void HAL::Motor_Update(void *parameter)
   // it is usually called in motor.loopFOC()
   // this function reads the as5600 hardware and
   // has to be called before getAngle nad getVelocity
+#if SIMPLEFOC_DEBUG_ENABLE
   motor.monitor(); // 可以调用SimpleFOC Studio的上位机观看电机状态
+#endif
   command.run();
+
   update_receive_can_target();
 }

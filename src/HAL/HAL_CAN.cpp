@@ -7,6 +7,8 @@ QueueHandle_t Motor_Queue;
 
 void HAL::CAN_Init()
 {
+    // 从NVS取出当前的ID
+    CAN_GetCurrentMotorID() = get_int("CAN_ID", 0);
     Motor_Queue = xQueueCreate(1, sizeof(HAL::ReceiveMotorData));
     if (Motor_Queue == NULL)
     {
@@ -26,7 +28,7 @@ void HAL::CAN_Init()
     // Install TWAI driver
     if (twai_driver_install(&g_config, &t_config, &f_config) == ESP_OK)
     {
-        INFOLN("Twai Driver installed\n");
+        INFOLN("Twai Driver installed");
     }
     else
     {
@@ -38,7 +40,7 @@ void HAL::CAN_Init()
     // Start TWAI driver
     if (twai_start() == ESP_OK)
     {
-        INFOLN("Twai Driver started\n");
+        INFOLN("Twai Driver started");
     }
     else
     {
@@ -48,11 +50,41 @@ void HAL::CAN_Init()
     }
     // Create thread run Can receive
     xTaskCreate(HAL::CAN_Update, "CAN_Updata", 4096, NULL, 0, NULL);
+    // Create thread run Can send motor feedback
+#if 1
+    xTaskCreate([](void *)
+                {
+                    INIT_TASK_TIME(5);
+                    INFO("Motor Feedback thread create success\n");
+                    twai_message_t message;
+                    message.identifier = MOTOR_CAN_ID + currentMotorID;
+                    message.extd = 0; // 标准帧
+                    message.rtr = 0;  // 数据帧
+                    message.self = 0; // 不接受自己发送的消息
+                    message.data_length_code = 8;
+                    MotorFeedData motorFeedData;
+                    while (1)
+                    {
+                        //1.准备数据
+                        Motor_GetCurrentState(motorFeedData);
+                        for(uint8_t i = 0; i < 8; i++)
+                            message.data[i] = motorFeedData.data[i];
+                        //2.发送数据
+                        int ret = twai_transmit(&message, pdMS_TO_TICKS(1000));
+                        // if (ret != ESP_OK)
+                        // {
+                        //     ERR("Failed(0x%x) to queue message for transmission\n", ret);
+                        // }
+                        WAIT_TASK_TIME();
+                    } },
+                "CAN_FeedBack", 4096, NULL, 0, NULL);
+#endif
     // 仅用于测试
     // sys_timer *timePtr = sys_timer::get_instance();
     // timePtr->CreateStartTimmer(3000, [](void *)
     //                            { HAL::CAN_Send_Template(); });
 }
+
 void HAL::CAN_Receive_Template()
 {
     // CAN_frame_t rx_frame;
@@ -139,7 +171,7 @@ void HAL::CAN_Receive(ReceiveMotorData *recv_data)
 
 void HAL::CAN_Update(void *)
 {
-    INIT_TASK_TIME(1);
+    INIT_TASK_TIME(5); // 5MS
     INFO("Start CAN_Update thread\n");
     while (1)
     {
@@ -213,7 +245,7 @@ void HAL::CAN_Send_Template()
     }
 }
 // 用于通过按键或其他外设来设置当前的电机ID，从0开始
-uint8_t HAL::CAN_GetCurrentMotorID()
+uint8_t &HAL::CAN_GetCurrentMotorID()
 {
     return currentMotorID;
 }

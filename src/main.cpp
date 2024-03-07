@@ -127,5 +127,6 @@ void setup()
 void loop()
 {
   HAL::Motor_Update(NULL);
+  HAL::HAL_Update();
 }
 #endif
