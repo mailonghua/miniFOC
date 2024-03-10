@@ -26,6 +26,13 @@
 
 #define WAIT_TASK_TIME() \
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
+
+#define INIT_CAN_MSG(message)                           \
+    message.identifier = MOTOR_CAN_ID + currentMotorID; \
+    message.extd = 0;                                   \
+    message.rtr = 0;                                    \
+    message.self = 0;                                   \
+    message.data_length_code = 8;
 enum FOC_TYPE
 {
     OPEN_LOOP = 0,
@@ -46,8 +53,23 @@ enum SYS_STATE_SELECT
 {
     SYS_START = 0,
     CAN_ID_SELECT_MODE,
-    WIFI_SELECT_MODE,
+    WIFI_SELECT_MODE, // 正常链接的状态音
+    WIFI_NO_CONNECT,  // 没有链接的状态音
+    WIFI_DISCONNECT,  // 正常断开连接的状态音
     SYS_INTERNAL_ERROR,
+};
+// UART Command define
+enum UART_RECEIVE_COMMAND
+{
+    GET_SYS_STATE_CMD = 0x5500,     // 获取系统状态
+    OPEN_WIFI_PWR_CMD = 0x5501,     // 开启WIFI
+    CLOSE_WIFI_PWR_CMD = 0x5502,    // 关闭WIFI
+    CLEAR_NVS_CMD = 0x5503,         // 清空NVS
+    OPEN_BLE_PWR_CMD = 0x5504,      // 开启BLE
+    CLOSE_BLE_PWR_CMD = 0x5505,     // 关闭BLE
+    SET_WIFI_SSID_PASSWD = 0x5506,  // 设置重新修改WIFI和SSID
+    DISABLE_MOTOR_DISABLE = 0x5507, // 失能电机
+
 };
 namespace HAL
 {
@@ -60,10 +82,10 @@ namespace HAL
     uint8_t getSysState();
     void playSysMusic(SYS_STATE_SELECT select); // 播放音乐的选择
     void selectSysLed(SYS_STATE_SELECT select); // 选择系统状态灯
-    void systemStateUpdate();                   // 线程调用的函数
-    void changeLedMode(SYS_STATE_SELECT);       // 改变LED工作的状态
+    void StartSystemStateDetectTask();          // 线程调用的函数
+    void changeShowSysMode(SYS_STATE_SELECT);   // 改变LED工作的状态
     // OTA
-    void OTA_Init();
+    bool OTA_Init();
     void OTA_Update();
     void OTA_SwitchStatus();
 
@@ -71,7 +93,9 @@ namespace HAL
     void Motor_Init();
     void Motor_Update(void *parameter);
     void Motor_GetCurrentState(MotorFeedData &data);
-
+    bool Motor_Disable();
+    void Motor_ZeroTarget();
+    int Get_MotorState();
     // NVS-EEPROM
     int NVS_Init();
     void NVS_End();
@@ -93,8 +117,8 @@ namespace HAL
     void CAN_SetCurrentMotorID(uint8_t id);
 
     // 输入的外设控制
-    void Input_Key_Init();
-    void Uart_Receive_Init();
+    void StartInputKetDetectTask();
+    void Uart_Receive_IRQ_Register();
 
 }
 #endif

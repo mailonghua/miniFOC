@@ -49,13 +49,13 @@ void HAL::CAN_Init()
             ;
     }
     // Create thread run Can receive
-    xTaskCreate(HAL::CAN_Update, "CAN_Updata", 4096, NULL, 0, NULL);
+    // xTaskCreate(HAL::CAN_Update, "CAN_Updata", 4096, NULL, 0, NULL);
     // Create thread run Can send motor feedback
-#if 1
+#if 0
     xTaskCreate([](void *)
                 {
                     INIT_TASK_TIME(5);
-                    INFO("Motor Feedback thread create success\n");
+                    INFO("Motor Feedback thread create success....\n");
                     twai_message_t message;
                     message.identifier = MOTOR_CAN_ID + currentMotorID;
                     message.extd = 0; // 标准帧
@@ -146,11 +146,24 @@ void HAL::CAN_Receive(ReceiveMotorData *recv_data)
         {
             if (message.data_length_code == 8)
             {
+                // 1.接收数据
                 recv_data->data[0] = message.data[currentMotorID * 2 + 0];
                 recv_data->data[1] = message.data[currentMotorID * 2 + 1];
                 Swap_Byte(recv_data->data[0], recv_data->data[1]);
                 // Overwrite in queue
                 xQueueOverwrite(Motor_Queue, recv_data);
+                // 2.反馈数据 --已经接收到了当前的目标数据-发送当前的状态数据
+                MotorFeedData motorFeedData;
+                Motor_GetCurrentState(motorFeedData);
+                twai_message_t sendMessage;
+                INIT_CAN_MSG(sendMessage);
+                for (uint8_t i = 0; i < 8; i++)
+                    sendMessage.data[i] = motorFeedData.data[i];
+                int ret = twai_transmit(&sendMessage, pdMS_TO_TICKS(1000));
+                if (ret != ESP_OK)
+                {
+                    ERR("Failed(0x%x) to queue message for transmission\n", ret);
+                }
             }
             else
             {
@@ -172,7 +185,7 @@ void HAL::CAN_Receive(ReceiveMotorData *recv_data)
 void HAL::CAN_Update(void *)
 {
     INIT_TASK_TIME(5); // 5MS
-    INFO("Start CAN_Update thread\n");
+    INFO("CAN_Update thread start success...\n");
     while (1)
     {
         CAN_Receive(&motor_feed);

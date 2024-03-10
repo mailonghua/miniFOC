@@ -7,7 +7,7 @@
 const char *ssid = STASSID;
 const char *password = STAPSK;
 String Current_IP_Address = "NUll"; // 当前IP地址
-void HAL::OTA_Init()
+bool HAL::OTA_Init()
 {
 
     WiFi.mode(WIFI_STA);
@@ -16,9 +16,10 @@ void HAL::OTA_Init()
     WiFi.disconnect();
     WiFi.begin(ssid, password);
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
-    // while (WiFi.waitForConnectResult() != WL_CONNECTED)
+    // WiFi.setTxPower(WIFI_POWER_11dBm);
+    //  while (WiFi.waitForConnectResult() != WL_CONNECTED)
     INFOLN("Wait wifi for connect");
-    uint16_t retry_times = 60;
+    uint16_t retry_times = 30;
     while ((WiFi.status() != WL_CONNECTED) && (retry_times != 0))
     {
         // ERR("Connection Failed! Rebooting...%d", status);
@@ -30,7 +31,7 @@ void HAL::OTA_Init()
     if ((retry_times == 0) && (WiFi.status() != WL_CONNECTED))
     {
         ERR("Wifi not connect OTA not use\n");
-        return;
+        return false;
     }
     ArduinoOTA.onStart([]()
                        {
@@ -66,6 +67,7 @@ void HAL::OTA_Init()
     INFOLN("IP address: ");
     INFOLN(WiFi.localIP());
     Current_IP_Address = WiFi.localIP().toString();
+    return true;
 }
 void HAL::OTA_Update()
 {
@@ -85,14 +87,24 @@ void HAL::OTA_SwitchStatus()
             {
                 INFOLN("OTA thread create success...");
 
-                HAL::OTA_Init();
-                changeLedMode(WIFI_SELECT_MODE); // 播放wifi已经链接的声音
-                INIT_TASK_TIME(10);              // 100毫秒-10HZ
-                otaStatus = true;
-                while (otaStatus)
+                bool ret = HAL::OTA_Init();
+                if (ret == false)
                 {
-                    OTA_Update();
-                    WAIT_TASK_TIME();
+                    changeShowSysMode(WIFI_NO_CONNECT);
+                    WiFi.disconnect();   // 断开连接
+                    WiFi.mode(WIFI_OFF); // 节省功耗，关闭WIFI模块
+                    otaStatus = false;
+                }
+                else
+                {
+                    changeShowSysMode(WIFI_SELECT_MODE);
+                    INIT_TASK_TIME(10); // 100毫秒-10HZ
+                    otaStatus = true;
+                    while (otaStatus)
+                    {
+                        OTA_Update();
+                        WAIT_TASK_TIME();
+                    }
                 }
                 vTaskDelete(NULL); // 回收本线程
                 INFOLN("OTA thread delete success...");
@@ -104,9 +116,9 @@ void HAL::OTA_SwitchStatus()
     {
         INFOLN("Current close ota mode...");
         otaStatus = false;
-        WiFi.disconnect();               // 断开连接
-        WiFi.mode(WIFI_OFF);             // 节省功耗，关闭WIFI模块
-        changeLedMode(WIFI_SELECT_MODE); // 播放wifi已经链接的声音
+        WiFi.disconnect();                  // 断开连接
+        WiFi.mode(WIFI_OFF);                // 节省功耗，关闭WIFI模块
+        changeShowSysMode(WIFI_DISCONNECT); // 播放wifi已经链接的声音
         return;
     }
 }

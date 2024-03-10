@@ -25,7 +25,7 @@ void CuteBuzzerSoundsClass::initBuzzer(int aBuzzerPin) {
 void CuteBuzzerSoundsClass::_tone (float noteFrequency, long noteDuration, int silentDuration){
   if(silentDuration==0) {silentDuration=1;}
 
-    #if defined(ESP32)
+    #if 0//defined(ESP32)
   ledcWriteTone(ledc_channel, noteFrequency);
   delay(noteDuration);     // milliseconds
   ledcWrite(ledc_channel, 0);     // notone
@@ -164,6 +164,7 @@ void CuteBuzzerSoundsClass::play(int soundName){
 
   case S_FART1:
     bendTones(1600, 3000, 1.02, 2, 15);
+    noTone(buzzerPin);
     break;
 
   case S_FART2:

@@ -103,25 +103,20 @@ void loop()
 }
 #else
 #include "HAL/HAL.h"
-void start_user_task()
+void Start_UserTask()
 {
-
   // 1.启动FOC算法-循环频率
-  xTaskCreate([](void *para) { // 使用了匿名函数
-    INFO("FOC loop task start success...\n");
-    while (1)
-    {
-      INIT_TASK_TIME(1); // 2ms周期进行循环执行FOC
-      HAL::Motor_Update(NULL);
-      WAIT_TASK_TIME();
-    }
-  },
-              "miniFOC", 2048, NULL, 1, NULL);
+  xTaskCreate(HAL::CAN_Update, "CAN_Updata", 4096, NULL, 0, NULL);
+  HAL::StartSystemStateDetectTask();
+  HAL::StartInputKetDetectTask();
+  vTaskDelay(pdMS_TO_TICKS(1000));
+  INFO("The number of threads currently startd is %d\n", uxTaskGetNumberOfTasks());
 }
 void setup()
 {
   Serial.begin(115200);
   HAL::HAL_Init();
+  Start_UserTask();
 }
 
 void loop()

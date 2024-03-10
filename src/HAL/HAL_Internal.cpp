@@ -37,7 +37,7 @@ void HAL::playSysMusic(SYS_STATE_SELECT select)
         ERR("Not match case\n");
     }
 }
-// 调整系统转太灯的闪烁时间
+// 调整系统转LED灯的闪烁时间
 void HAL::selectSysLed(SYS_STATE_SELECT select)
 {
     int choice = static_cast<int>(select);
@@ -52,7 +52,7 @@ void HAL::selectSysLed(SYS_STATE_SELECT select)
 }
 // 调整模式
 static uint8_t led_blink_num = 0;
-void HAL::changeLedMode(SYS_STATE_SELECT mode)
+void HAL::changeShowSysMode(SYS_STATE_SELECT mode)
 {
     switch (mode)
     {
@@ -61,12 +61,16 @@ void HAL::changeLedMode(SYS_STATE_SELECT mode)
         break;
     case WIFI_SELECT_MODE:
         break;
+    case WIFI_NO_CONNECT:
+        break;
+    case WIFI_DISCONNECT:
+        break;
     default:
         break;
     }
     ledMode = mode;
 }
-void HAL::systemStateUpdate()
+void HAL::StartSystemStateDetectTask()
 {
     pinMode(STATUS_LED, OUTPUT);
     // 启用下拉电阻
@@ -76,7 +80,7 @@ void HAL::systemStateUpdate()
 
     xTaskCreate([](void *)
                 {
-                    INFOLN("Create systemStateUpdate thread success\n");
+                    INFOLN("Create StartSystemStateDetectTask thread success\n");
                     uint8_t status = 1;
                     unsigned long waitStartTime = 0;
                     bool canWaitStartFlag = false;
@@ -87,6 +91,16 @@ void HAL::systemStateUpdate()
                                 cute.play(S_WIFI_SELECT); 
                                 ledMode = SYS_START;
                                 INFOLN("Enter wifi mode");
+                                break;
+                            case WIFI_NO_CONNECT:
+                                cute.play(S_MODE1); 
+                                ledMode = SYS_START;
+                                INFOLN("Wifi  disconnect...Please retry");
+                                break;
+                            case WIFI_DISCONNECT:
+                                cute.play(S_DISCONNECTION); 
+                                ledMode = SYS_START;
+                                break;
                             case SYS_START://闪烁提示
                                 status = (status==1)?(status=0):(status=1);
                                 digitalWrite(STATUS_LED,status);
@@ -110,5 +124,5 @@ void HAL::systemStateUpdate()
                         }
                         
                     } },
-                "systemStateUpdate", 4096, NULL, 0, NULL);
+                "StartSystemStateDetectTask", 4096, NULL, 0, NULL);
 }

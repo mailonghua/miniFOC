@@ -9,6 +9,8 @@ static BLDCMotor motor = BLDCMotor(7);
 static BLDCDriver3PWM driver = BLDCDriver3PWM(5, 6, 7, 4);
 static InlineCurrentSense current_sense = InlineCurrentSense(0.01f, 50.f, 13, 14);
 static Commander command = Commander(Serial);
+// 用于存储simplefoc初始化状态,如初始化失败则停止foc的算法执行，并disable motor
+static int simpleFOCInitFlag = 0; //: 0：代表正常1：代表异常，用于循环检测的判断异常
 
 void doTarget(char *cmd) { command.scalar(&motor.target, cmd); }
 void doMotor(char *cmd) { command.motor(&motor, cmd); }
@@ -32,17 +34,20 @@ void driver_init()
   driver.init();
 }
 // 电流传感器初始化
-void current_sense_init()
+int current_sense_init()
 {
   if (current_sense.init())
+  {
     Serial.println("Current sense init success!");
+  }
   else
   {
     Serial.println("Current sense init failed!");
-    return;
+    return 1;
   }
   // 结合硬件，可以看到当前的版本的B相的检测电阻和检测引脚方向是反的，因此这里取反
   current_sense.gain_b *= -1;
+  return 0;
 }
 
 // 平滑调整电流的函数
@@ -107,10 +112,10 @@ void foc_current_init(int direction = -1, float angle = -1)
   // 电流环的q和d的PID
   motor.PID_current_q.P = 30; // 5;
   motor.PID_current_q.I = 25; // 300;
-  motor.PID_current_q.D = 1;  // 添加了D后，打开后电机,在打开串口条件假，启动会有转动
+  motor.PID_current_q.D = 1;  // 添加了D后，打开后电机,在打开串口条件下，启动会有转动
   motor.PID_current_d.P = 18; // 5;
   motor.PID_current_d.I = 30; // 300;
-  motor.PID_current_d.D = 1;  // 打开后电机启动，在打开串口条件假，会有异常转动
+  motor.PID_current_d.D = 1;  // 打开后电机启动，在打开串口条件下，会有异常转动
   //  低通滤波器
   motor.LPF_current_q.Tf = 0.5;
   motor.LPF_current_d.Tf = 0.5;
@@ -118,7 +123,13 @@ void foc_current_init(int direction = -1, float angle = -1)
   motor.useMonitoring(Serial);
   // 初始化电机
   motor.init();
-  current_sense_init(); // 初始化电流传感器--ADC的校准和偏差计算
+  simpleFOCInitFlag = current_sense_init(); // 初始化电流传感器--ADC的校准和偏差计算
+  if (simpleFOCInitFlag != SYS_NORMAL)
+  {
+    ERR("Current sense init error Not enable motor\n ");
+    motor.disable();
+    return;
+  }
   motor.linkCurrentSense(&current_sense);
   // 检查时候需要自动校准编码器，启用FOC
   if ((direction != -1) && (angle != -1))
@@ -133,7 +144,15 @@ void foc_current_init(int direction = -1, float angle = -1)
   }
   // motor.sensor_direction = CW;
   // motor.zero_electric_angle = 5.42;
-  motor.initFOC();
+  simpleFOCInitFlag = motor.initFOC();
+  if (simpleFOCInitFlag == 0)
+  {
+    ERR("Motor initFOC error Disable Motor driver\n");
+    motor.disable();
+    simpleFOCInitFlag = SYS_ERROR; // 代表异常，用于循环检测的判断异常
+    return;
+  }
+  simpleFOCInitFlag = SYS_NORMAL;
   // 如果是从新校准的数据则将参数存储在NVS中
   if ((motor.sensor_direction != direction) || (motor.zero_electric_angle != angle))
   {
@@ -302,18 +321,36 @@ void HAL::Motor_Init()
 }
 void HAL::Motor_Update(void *parameter)
 {
-  motor.loopFOC();
-  // 开环速度运动
-  // 使用电机电压限制和电机速度限制
-  motor.move();
+  if (simpleFOCInitFlag == SYS_NORMAL)
+  {
+    motor.loopFOC();
+    // 开环速度运动
+    // 使用电机电压限制和电机速度限制
+    motor.move();
+  }
+#if SIMPLEFOC_DEBUG_ENABLE
   // iterative function updating the as5600 internal variables
   // it is usually called in motor.loopFOC()
   // this function reads the as5600 hardware and
   // has to be called before getAngle nad getVelocity
-#if SIMPLEFOC_DEBUG_ENABLE
   motor.monitor(); // 可以调用SimpleFOC Studio的上位机观看电机状态
 #endif
+#ifndef UART_RECEIVE_SELF_METHORD
   command.run();
+#endif
 
   update_receive_can_target();
+}
+int HAL::Get_MotorState()
+{
+  return simpleFOCInitFlag;
+}
+bool HAL::Motor_Disable()
+{
+  motor.disable();
+  return true;
+}
+void HAL::Motor_ZeroTarget()
+{
+  motor.target = 0;
 }
