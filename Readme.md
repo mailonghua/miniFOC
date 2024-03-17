@@ -59,16 +59,21 @@ git push -u origin main
 
 ## 4.串口指令
 
-| 指令   | 说明                          | 返回值                 |
-| ------ | ----------------------------- | ---------------------- |
-| 0x5500 | 获取系统状态                  | 0：Success<br />1:Fail |
-| 0x5501 | 开启WIFI                      | 0：Success<br />1:Fail |
-| 0x5502 | *关闭WIFI*                    | 0：Success<br />1:Fail |
-| 0x5503 | 清空NVS                       | 0：Success<br />1:Fail |
-| 0x5504 | 开启BLE\<todo>                | 0：Success<br />1:Fail |
-| 0x5505 | 关闭BLE\<todo>                | 0：Success<br />1:Fail |
-| 0x5506 | 设置重新修改WIFI和SSID\<todo> | 0：Success<br />1:Fail |
-| 0x5507 | 失能电机                      | 0：Success<br />1:Fai  |
+| 指令            | 说明                          | 返回值                           |
+| --------------- | ----------------------------- | -------------------------------- |
+| 0x5500          | 获取系统状态                  | 0：Success<br />1:Fail           |
+| 0x5501          | 开启WIFI                      | 0：Success<br />1:Fail           |
+| 0x5502          | *关闭WIFI*                    | 0：Success<br />1:Fail           |
+| 0x5503          | 清空NVS                       | 0：Success<br />1:Fail           |
+| 0x5504          | 开启BLE\<todo>                | 0：Success<br />1:Fail           |
+| 0x5505          | 关闭BLE\<todo>                | 0：Success<br />1:Fail           |
+| 0x5506          | 设置重新修改WIFI和SSID\<todo> | 0：Success<br />1:Fail           |
+| 0x5507          | 失能电机                      | 0：Success<br />1:Fai            |
+| TTxx.xx[字符串] | 发送目标值                    | NULL                             |
+| 0x5511          | 开启/关闭波形输出             | NULL                             |
+| 0x5508          | *力矩模式*                    | 补充：其他模式无法切换到力矩模式 |
+| 0x5509          | *速度模式*                    | 其他模式可切换到该模式           |
+| 0x5510          | *位置模式*                    | 其他模式可切换到该模式           |
 
 
 

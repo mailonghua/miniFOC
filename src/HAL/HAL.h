@@ -61,16 +61,23 @@ enum SYS_STATE_SELECT
 // UART Command define
 enum UART_RECEIVE_COMMAND
 {
-    GET_SYS_STATE_CMD = 0x5500,     // 获取系统状态
-    OPEN_WIFI_PWR_CMD = 0x5501,     // 开启WIFI
-    CLOSE_WIFI_PWR_CMD = 0x5502,    // 关闭WIFI
-    CLEAR_NVS_CMD = 0x5503,         // 清空NVS
-    OPEN_BLE_PWR_CMD = 0x5504,      // 开启BLE
-    CLOSE_BLE_PWR_CMD = 0x5505,     // 关闭BLE
-    SET_WIFI_SSID_PASSWD = 0x5506,  // 设置重新修改WIFI和SSID
-    DISABLE_MOTOR_DISABLE = 0x5507, // 失能电机
 
+    GET_SYS_STATE_CMD = 0x5500,          // 获取系统状态
+    OPEN_WIFI_PWR_CMD = 0x5501,          // 开启WIFI
+    CLOSE_WIFI_PWR_CMD = 0x5502,         // 关闭WIFI
+    CLEAR_NVS_CMD = 0x5503,              // 清空NVS
+    OPEN_BLE_PWR_CMD = 0x5504,           // 开启BLE
+    CLOSE_BLE_PWR_CMD = 0x5505,          // 关闭BLE
+    SET_WIFI_SSID_PASSWD = 0x5506,       // 设置重新修改WIFI和SSID
+    DISABLE_MOTOR_DISABLE = 0x5507,      // 失能电机
+    CHOOSE_MOTOR_CURRENT_MODE = 0x5508,  // 力矩模式
+    CHOOSE_MOTOR_VELOCITY_MODE = 0x5509, // 速度模式
+    CHOOSE_MOTOR_POSITION_MODE = 0x5510, // 位置模式
+    OPEN_MOTOR_WAVAE_DEBUG = 0x5511,      // 开启波形输出，适用VOFA格式
+    SET_MOTOR_TARGET = 0x5454,           // 0x5454:对应的ASCII是TT 设置当前电机的目标 0x5511 + 2Byte(电机的目标(只能设置整数))
+    
 };
+
 namespace HAL
 {
     void HAL_Init();
@@ -93,9 +100,13 @@ namespace HAL
     void Motor_Init();
     void Motor_Update(void *parameter);
     void Motor_GetCurrentState(MotorFeedData &data);
+    void Motor_GetCurrentState(MOTOR_RawData_t &data);
     bool Motor_Disable();
     void Motor_ZeroTarget();
+    void Motor_SetTarget(float data);
     int Get_MotorState();
+    void Motor_SwitchMode(UART_RECEIVE_COMMAND mode);
+
     // NVS-EEPROM
     int NVS_Init();
     void NVS_End();
@@ -119,6 +130,5 @@ namespace HAL
     // 输入的外设控制
     void StartInputKetDetectTask();
     void Uart_Receive_IRQ_Register();
-
 }
 #endif

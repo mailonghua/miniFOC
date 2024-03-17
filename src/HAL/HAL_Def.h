@@ -21,9 +21,20 @@ namespace HAL
     uint16_t Rotor_Machinery_Angle; // 转子机械角度
     int16_t Rotor_Speed;            // 转子速度
     uint16_t Toque;                 // 转矩
-    uint8_t tempetature;          //电机温度
-    uint8_t state;               // 预留
+    uint8_t tempetature;            // 电机温度
+    uint8_t state;                  // 预留
   } CAN_Recv_t;
+  // 电机的反馈状态
+  typedef struct
+  {
+    float target;
+    float shaft_angle;      // 累加角度值
+    float electrical_angle; // 机械角度
+    float speed;
+    float toque_q;     // 力矩
+    float toque_d;     // 力矩
+    float tempetature; // 温度
+  } MOTOR_RawData_t;
   typedef union
   {
     uint8_t data[8];

@@ -63,8 +63,15 @@ void HAL::StartInputKetDetectTask()
         },
         "KeyDetectThread", 2048, NULL, 0, NULL);
 }
+
 // 串口处理的任务
+float valueTaget = 0;
+uint8_t feedBackStr[3] = {0x55, 0x00};
 static UART_RECEIVE_COMMAND currentCMD; // 当前指令
+
+// 用于波形debug
+static TaskHandle_t waveDebugHandle;
+static bool waveDebugFlag = false;
 static void Uart_Receive_Case_Switch()
 {
     uint16_t size = Serial.available();
@@ -86,10 +93,10 @@ static void Uart_Receive_Case_Switch()
         return;
     }
     // 3.处理数据
-    // 串口发送的数据低位在前，高位在后
+    // 串口发送的数据高字节先发送，低字节后发送
     uint16_t cmd = bufferPtr[0];
     cmd = cmd << 8 | bufferPtr[1];
-    uint8_t feedBackStr[3] = {0x55, 0x00};
+
     switch (cmd)
     {
     case GET_SYS_STATE_CMD:
@@ -128,6 +135,78 @@ static void Uart_Receive_Case_Switch()
         INFOLN("Disable Motor...");
         HAL::Motor_Disable();
         break;
+    case CHOOSE_MOTOR_CURRENT_MODE:
+        INFOLN("Set motor for current mode");
+        HAL::Motor_SwitchMode(CHOOSE_MOTOR_CURRENT_MODE);
+        break;
+    case CHOOSE_MOTOR_VELOCITY_MODE:
+        INFOLN("Set motor for velocity mode");
+        HAL::Motor_SwitchMode(CHOOSE_MOTOR_VELOCITY_MODE);
+        break;
+    case CHOOSE_MOTOR_POSITION_MODE:
+        INFOLN("Set motor for position mode");
+        HAL::Motor_SwitchMode(CHOOSE_MOTOR_POSITION_MODE);
+        break;
+    case SET_MOTOR_TARGET:
+    {
+        INFO("Set motor target(%d)...\n", size);
+        if (size <= 2)
+        {
+            ERR("No valid target data...\n");
+            for (int i = 0; i < size; i++)
+            {
+                INFO("0x%x ", bufferPtr[i]);
+            }
+            break;
+        }
+        char *dataPtr = static_cast<char *>(malloc(size - 1));
+        for (int i = 2; i < size; i++)
+        {
+            dataPtr[i - 2] = static_cast<char>(bufferPtr[i]);
+        }
+        dataPtr[size - 2] = '\0'; // 使用atof需要手动添加结束符
+        INFO("Receive motor target:%s\n", dataPtr);
+        HAL::Motor_SetTarget(atof(dataPtr));
+        free(dataPtr);
+        break;
+    }
+    case OPEN_MOTOR_WAVAE_DEBUG:
+    {
+        if (waveDebugFlag == false)
+        {
+            xTaskCreate(
+                [](void *)
+                {
+                    waveDebugFlag = true;
+                    INFOLN("Motor wave debug thread create success...");
+                    INIT_TASK_TIME(50);
+                    while (waveDebugFlag)
+                    {
+                        HAL::MOTOR_RawData_t data;
+                        HAL::Motor_GetCurrentState(data);
+                        Serial.printf("%f,%f,%f,%f,%f,%f,%f\n",
+                                      data.target,
+                                      data.shaft_angle,
+                                      data.electrical_angle,
+                                      data.speed,
+                                      data.toque_q,
+                                      data.toque_d,
+                                      data.tempetature);
+                        WAIT_TASK_TIME();
+                    }
+                    INFOLN("Close motor wave debug thread complete");
+                    vTaskDelete(NULL);
+                },
+                "motor_debug_thread", 4096, NULL, 0, &waveDebugHandle);
+        }
+        else
+        {
+            INFOLN("Start Close motor wave debug thread");
+            waveDebugFlag = false;
+        }
+    }
+
+    break;
     default:
         ERR("Not match cmd(0x%x) receive data:\n", cmd);
         for (int i = 0; i < size; i++)

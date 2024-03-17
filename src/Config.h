@@ -2,10 +2,12 @@
 #define __CONFIG_H__
 // 控制用simpleFOC Studio的串口输出控制
 #define SIMPLEFOC_DEBUG_ENABLE 0
+
 // 串口接收选择
 // 定义：使用自定义的串口的指令
 // 未定义：使用SimpleFOC的指令处理
-#define UART_RECEIVE_SELF_METHORD
+#define UART_RECEIVE_SELF_METHORD 1
+
 // I2C
 #define I2C_SDA_0 GPIO_NUM_1
 #define I2C_SCL_0 GPIO_NUM_0

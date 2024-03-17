@@ -175,12 +175,214 @@ void foc_current_init(int direction = -1, float angle = -1)
   _delay(1000);
 }
 // FOC速度环
-void foc_speed_init()
+void foc_speed_init(int direction = -1, float angle = -1)
 {
+  INFOLN("foc_speed_init...");
+  encode_init(); // 编码器初始化
+  driver_init(); // 驱动初始化
+  // 连接电机和驱动器
+  motor.linkDriver(&driver);
+  motor.controller = MotionControlType::velocity;
+
+  // 速度环PID参数设置
+  motor.PID_velocity.P = 0.2;
+  motor.PID_velocity.I = 0.2;
+  motor.PID_velocity.D = 0;
+  motor.PID_velocity.output_ramp = 1000;
+  motor.LPF_velocity.Tf = 0.02;
+  motor.voltage_limit = 12;
+  // // 角度环PID参数设置
+  // motor.P_angle.P = 20;
+  // motor.P_angle.I = 0;
+  // motor.P_angle.D = 0;
+  motor.useMonitoring(Serial);
+  // 初始化电机
+  motor.init();
+
+  // 检查时候需要自动校准编码器，启用FOC
+  if ((direction != -1) && (angle != -1))
+  {
+    INFO("Success get moto para....\n");
+    motor.sensor_direction = (Direction)direction;
+    motor.zero_electric_angle = angle;
+  }
+  else
+  {
+    INFO("Not get moto para Start autl calibrate");
+  }
+  // motor.sensor_direction = CW;
+  // motor.zero_electric_angle = 5.42;
+  simpleFOCInitFlag = motor.initFOC();
+  if (simpleFOCInitFlag == 0)
+  {
+    ERR("Motor initFOC error Disable Motor driver\n");
+    motor.disable();
+    simpleFOCInitFlag = SYS_ERROR; // 代表异常，用于循环检测的判断异常
+    return;
+  }
+  simpleFOCInitFlag = SYS_NORMAL;
+  // 如果是从新校准的数据则将参数存储在NVS中
+  if ((motor.sensor_direction != direction) || (motor.zero_electric_angle != angle))
+  {
+    int ret = HAL::put_int(MOTO_DIRECTION_PARA, motor.sensor_direction);
+    ret += HAL::put_float(MOTO_ANGLE_PARA, motor.zero_electric_angle);
+    if (ret != 8)
+    {
+      ERR("Storage motor para failed(%d)..\n", ret);
+    }
+    else
+    {
+      INFO("Store motor para success moto_direction=%d,zero_electric_angle=%f\n",
+           motor.sensor_direction, motor.zero_electric_angle);
+    }
+  }
+  motor.target = 2.0f;
+
+  command.add('T', doTarget, "target velocity");
+  command.add('M', doMotor, "my motor");
+  _delay(1000);
 }
 // FOC位置环
-void foc_position_init()
+void foc_position_init(int direction = -1, float angle = -1)
 {
+  INFOLN("FOC position init...");
+  encode_init(); // 编码器初始化
+  driver_init(); // 驱动初始化
+  // 连接电机和驱动器
+  motor.linkDriver(&driver);
+  motor.controller = MotionControlType::angle;
+
+  // 速度环PID参数设置
+  motor.PID_velocity.P = 0.2;
+  motor.PID_velocity.I = 0.2;
+  motor.PID_velocity.D = 0;
+  motor.PID_velocity.output_ramp = 1000;
+  motor.LPF_velocity.Tf = 0.02;
+  motor.voltage_limit = 12;
+  // // 角度环PID参数设置
+  motor.P_angle.P = 20;
+  motor.P_angle.I = 0;
+  motor.P_angle.D = 0;
+  motor.LPF_angle.Tf = 0;
+  motor.useMonitoring(Serial);
+  // 初始化电机
+  motor.init();
+
+  // 检查时候需要自动校准编码器，启用FOC
+  if ((direction != -1) && (angle != -1))
+  {
+    INFO("Success get moto para....\n");
+    motor.sensor_direction = (Direction)direction;
+    motor.zero_electric_angle = angle;
+  }
+  else
+  {
+    INFO("Not get moto para Start autl calibrate");
+  }
+  // motor.sensor_direction = CW;
+  // motor.zero_electric_angle = 5.42;
+  simpleFOCInitFlag = motor.initFOC();
+  if (simpleFOCInitFlag == 0)
+  {
+    ERR("Motor initFOC error Disable Motor driver\n");
+    motor.disable();
+    simpleFOCInitFlag = SYS_ERROR; // 代表异常，用于循环检测的判断异常
+    return;
+  }
+  simpleFOCInitFlag = SYS_NORMAL;
+  // 如果是从新校准的数据则将参数存储在NVS中
+  if ((motor.sensor_direction != direction) || (motor.zero_electric_angle != angle))
+  {
+    int ret = HAL::put_int(MOTO_DIRECTION_PARA, motor.sensor_direction);
+    ret += HAL::put_float(MOTO_ANGLE_PARA, motor.zero_electric_angle);
+    if (ret != 8)
+    {
+      ERR("Storage motor para failed(%d)..\n", ret);
+    }
+    else
+    {
+      INFO("Store motor para success moto_direction=%d,zero_electric_angle=%f\n",
+           motor.sensor_direction, motor.zero_electric_angle);
+    }
+  }
+  motor.target = 1.0f;
+
+  command.add('T', doTarget, "target velocity");
+  command.add('M', doMotor, "my motor");
+  _delay(1000);
+}
+#define ZERO_MOTOR_TARGET()                          \
+  INFOLN("Previous mode motor reset wait 1 minute"); \
+  motor.target = 0;                                  \
+  vTaskDelay(pdMS_TO_TICKS(1000));
+void HAL::Motor_SwitchMode(UART_RECEIVE_COMMAND mode)
+{
+  switch (mode)
+  {
+  case CHOOSE_MOTOR_CURRENT_MODE: // 电流模式
+    INFOLN("Switch current mode...");
+    ZERO_MOTOR_TARGET();
+    motor.torque_controller = TorqueControlType::foc_current; // foc电流力矩控制
+    motor.controller = MotionControlType::torque;
+    motor.PID_current_q.P = 30; // 5;
+    motor.PID_current_q.I = 25; // 300;
+    motor.PID_current_q.D = 1;  // 添加了D后，打开后电机,在打开串口条件下，启动会有转动
+    motor.PID_current_d.P = 18; // 5;
+    motor.PID_current_d.I = 30; // 300;
+    motor.PID_current_d.D = 1;  // 打开后电机启动，在打开串口条件下，会有异常转动
+    //  低通滤波器
+    motor.LPF_current_q.Tf = 0.5;
+    motor.LPF_current_d.Tf = 0.5;
+    motor.current_limit = 1.0;
+    motor.init();
+    simpleFOCInitFlag = current_sense_init(); // 初始化电流传感器--ADC的校准和偏差计算
+    if (simpleFOCInitFlag != SYS_NORMAL)
+    {
+      ERR("Current sense init error Not enable motor\n ");
+      motor.disable();
+      return;
+    }
+    motor.linkCurrentSense(&current_sense);
+    break;
+  case CHOOSE_MOTOR_VELOCITY_MODE: // 速度模式
+    INFOLN("Switch velocity mode...");
+    ZERO_MOTOR_TARGET();
+    motor.torque_controller = TorqueControlType::voltage;
+    motor.controller = MotionControlType::velocity;
+    // 速度环PID参数设置
+    motor.PID_velocity.P = 0.2;
+    motor.PID_velocity.I = 0.2;
+    motor.PID_velocity.D = 0;
+    motor.PID_velocity.output_ramp = 1000;
+    motor.LPF_velocity.Tf = 0.02;
+    motor.voltage_limit = 12;
+    motor.init();
+    break;
+  case CHOOSE_MOTOR_POSITION_MODE: // 位置模式
+    INFOLN("Switch position mode...");
+    ZERO_MOTOR_TARGET();
+    motor.torque_controller = TorqueControlType::voltage;
+    motor.controller = MotionControlType::angle;
+
+    // 速度环PID参数设置
+    motor.PID_velocity.P = 0.2;
+    motor.PID_velocity.I = 0.2;
+    motor.PID_velocity.D = 0;
+    motor.PID_velocity.output_ramp = 1000;
+    motor.LPF_velocity.Tf = 0.02;
+    motor.voltage_limit = 12;
+    // 角度环PID参数设置
+    motor.P_angle.P = 20;
+    motor.P_angle.I = 0;
+    motor.P_angle.D = 0;
+    motor.LPF_angle.Tf = 0;
+    motor.init();
+    break;
+  default:
+    ERR("Switch mode error...\n");
+    break;
+  }
+  INFOLN("Switch motot mode complete...");
 }
 /**************机械角度的转换********************/
 
@@ -289,6 +491,7 @@ void test_can_feedback_data(const HAL::MotorFeedData *data, float electrical_ang
   INFO("SysStatus Send:%d\n", data->Motor_Data.state);
 }
 // 获取电机的状态
+// 用于CAN反馈
 void HAL::Motor_GetCurrentState(MotorFeedData &data)
 {
   // ESP32是小端模式，高字节存储在高地址，低字节存储在低地址
@@ -310,7 +513,16 @@ void HAL::Motor_GetCurrentState(MotorFeedData &data)
   data.Motor_Data.state = getSysState();
   // test_can_feedback_data(&data, electrical_angle, shaft_velocity, current_sp);
 }
-
+void HAL::Motor_GetCurrentState(MOTOR_RawData_t &data)
+{
+  data.target = motor.target;
+  data.shaft_angle = motor.shaft_angle;
+  data.electrical_angle = motor.electrical_angle;
+  data.speed = motor.shaft_velocity;
+  data.toque_q = motor.current.q;
+  data.toque_d = motor.current.q;
+  data.tempetature = MCU_Internal_Temperature_u8();
+}
 void HAL::Motor_Init()
 {
   // 读取参数
@@ -318,6 +530,8 @@ void HAL::Motor_Init()
   float motor_angle = get_float(MOTO_ANGLE_PARA, -1);
   INFO("Get motor param clock_wise(%d) motor_angle(%f)\n", clock_wise, motor_angle);
   foc_current_init(clock_wise, motor_angle);
+  // foc_speed_init(clock_wise, motor_angle);
+  // foc_position_init(clock_wise, motor_angle);
 }
 void HAL::Motor_Update(void *parameter)
 {
@@ -335,7 +549,7 @@ void HAL::Motor_Update(void *parameter)
   // has to be called before getAngle nad getVelocity
   motor.monitor(); // 可以调用SimpleFOC Studio的上位机观看电机状态
 #endif
-#ifndef UART_RECEIVE_SELF_METHORD
+#if UART_RECEIVE_SELF_METHORD == 0
   command.run();
 #endif
 
@@ -353,4 +567,8 @@ bool HAL::Motor_Disable()
 void HAL::Motor_ZeroTarget()
 {
   motor.target = 0;
+}
+void HAL::Motor_SetTarget(float data)
+{
+  motor.target = data;
 }
