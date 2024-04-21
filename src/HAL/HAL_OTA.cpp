@@ -52,12 +52,11 @@ bool HAL::OTA_Init()
         INFO("Sleep 1s and retry_(%d) connect (%s)...\n", retry_times, ssid);
         retry_times--;
         delay(1000);
-        // ESP.restart();
     }
     if ((retry_times == 0) && (WiFi.status() != WL_CONNECTED))
     {
         ERR("Wifi not connect OTA not use Restart system...\n");
-        ESP.restart();
+        REBOOT_SYS();
         return false;
     }
     if (!MDNS.begin("esp32s3"))

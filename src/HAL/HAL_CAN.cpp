@@ -9,6 +9,7 @@ void HAL::CAN_Init()
 {
     // 从NVS取出当前的ID
     CAN_GetCurrentMotorID() = get_int("CAN_ID", 0);
+    INFO("Get CANID :0x%x\n", CAN_GetCurrentMotorID());
     Motor_Queue = xQueueCreate(1, sizeof(HAL::ReceiveMotorData));
     if (Motor_Queue == NULL)
     {
@@ -142,7 +143,7 @@ void HAL::CAN_Receive(ReceiveMotorData *recv_data)
     else
     {
         // INFOLN("Message is in Standard Format\n");
-        if (MOTOR_CAN_ID == message.identifier) // 检测到接收的数据帧是否是发送给自研电机的
+        if ((MOTOR_CAN_ID + currentMotorID) == message.identifier) // 检测到接收的数据帧是否是发送给自研电机的
         {
             if (message.data_length_code == 8)
             {

@@ -205,6 +205,42 @@ static void Uart_Receive_Case_Switch()
             waveDebugFlag = false;
         }
     }
+    case SET_MOTOR_CAN_ID:
+    {
+        INFO("Set motor CAN ID\n");
+        if (size <= 2)
+        {
+            ERR("No valid target data...\n");
+            for (int i = 0; i < size; i++)
+            {
+                INFO("0x%x ", bufferPtr[i]);
+            }
+            break;
+        }
+        char *dataPtr = static_cast<char *>(malloc(size - 1));
+        for (int i = 2; i < size; i++)
+        {
+            dataPtr[i - 2] = static_cast<char>(bufferPtr[i]);
+        }
+        dataPtr[size - 2] = '\0'; // 使用atof需要手动添加结束符
+        INFO("Receive motor ID:%s\n", dataPtr);
+        // 设置CAN ID并且更新NVS，并进行重启
+        HAL::NVS_Init(); // 打开NVS
+        int32_t canID = atoi(dataPtr);
+        HAL::CAN_GetCurrentMotorID() = canID;
+        HAL::put_int("CAN_ID", canID);
+        HAL::NVS_End(); // 关闭NVS
+        free(dataPtr);
+        INFO("Motor system reboot Set CAN ID=0x%x\n", canID);
+        REBOOT_SYS();
+    }
+    case SET_SYSTEM_REBOOT:
+    {
+        INFO("Motor system reboot\n");
+        HAL::Motor_Disable();
+        sleep(1);
+        REBOOT_SYS();
+    }
 
     break;
     default:

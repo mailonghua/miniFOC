@@ -27,12 +27,18 @@
 #define WAIT_TASK_TIME() \
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
 
+#define REBOOT_SYS()            \
+    cute.play(S_DISCONNECTION); \
+    sleep(2);                   \
+    ESP.restart();
+
 #define INIT_CAN_MSG(message)                           \
     message.identifier = MOTOR_CAN_ID + currentMotorID; \
     message.extd = 0;                                   \
     message.rtr = 0;                                    \
     message.self = 0;                                   \
     message.data_length_code = 8;
+
 enum FOC_TYPE
 {
     OPEN_LOOP = 0,
@@ -73,9 +79,11 @@ enum UART_RECEIVE_COMMAND
     CHOOSE_MOTOR_CURRENT_MODE = 0x5508,  // 力矩模式
     CHOOSE_MOTOR_VELOCITY_MODE = 0x5509, // 速度模式
     CHOOSE_MOTOR_POSITION_MODE = 0x5510, // 位置模式
-    OPEN_MOTOR_WAVAE_DEBUG = 0x5511,      // 开启波形输出，适用VOFA格式
+    OPEN_MOTOR_WAVAE_DEBUG = 0x5511,     // 开启波形输出，适用VOFA格式
     SET_MOTOR_TARGET = 0x5454,           // 0x5454:对应的ASCII是TT 设置当前电机的目标 0x5511 + 2Byte(电机的目标(只能设置整数))
-    
+    SET_MOTOR_CAN_ID = 0x4944,           // 设置电机的CAN ID,指令对应的字符串：ID
+    SET_SYSTEM_REBOOT = 0x5513,          // 让电机系统重启
+
 };
 
 namespace HAL
