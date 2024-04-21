@@ -58,6 +58,15 @@ void loop()
 }
 #else
 #include "HAL/HAL.h"
+void Start_MotorTask(void *)
+{
+  INIT_TASK_TIME(1);
+  while (1)
+  {
+    HAL::Motor_Update(NULL);
+    WAIT_TASK_TIME();
+  }
+}
 void Start_UserTask()
 {
   // 1.启动FOC算法-循环频率
@@ -65,8 +74,10 @@ void Start_UserTask()
   HAL::StartSystemStateDetectTask();
   HAL::StartInputKetDetectTask();
   vTaskDelay(pdMS_TO_TICKS(1000));
+  xTaskCreate(Start_MotorTask, "MotorUpdate", 4096, NULL, 1, NULL); // 当前阶段最高优先级
   INFO("The number of threads currently startd is %d\n", uxTaskGetNumberOfTasks());
 }
+
 void setup()
 {
   Serial.begin(115200);
@@ -77,7 +88,7 @@ void setup()
 
 void loop()
 {
-  HAL::Motor_Update(NULL);
+  // HAL::Motor_Update(NULL);
   HAL::HAL_Update();
 }
 #endif
