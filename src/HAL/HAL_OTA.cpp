@@ -3,36 +3,71 @@
 // #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <ESPmDNS.h>
+#include "esp_wifi.h"
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
 String Current_IP_Address = "NUll"; // 当前IP地址
 bool HAL::OTA_Init()
 {
-
+    esp_wifi_set_ps(WIFI_PS_NONE); // 关闭WIFI的省点模式
+    WiFi.useStaticBuffers(true);
     WiFi.mode(WIFI_STA);
     WiFi.setMinSecurity(WIFI_AUTH_WEP);
     // WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
     WiFi.disconnect();
+
+    // IPAddress staticIP(192, 168, 31, 79); // 设定静态 IP 地址
+    // IPAddress gateway(192, 168, 31, 1);
+    // IPAddress subnet(255, 255, 255, 0);
+    // WiFi.config(staticIP, gateway, subnet);
     WiFi.begin(ssid, password);
-    WiFi.setTxPower(WIFI_POWER_8_5dBm);
+    /*
+        https://intellectualcuriosity.hatenablog.com/entry/2024/01/30/123336
+        Try WiFi connection at 34...Success!
+        Try WiFi connection at 33...Success!
+        Try WiFi connection at 32...Success!
+        Try WiFi connection at 31...Success!
+        Try WiFi connection at 30...Success!
+        Try WiFi connection at 29...Success!
+        Try WiFi connection at 28...Success!
+        Try WiFi connection at 27...Success!
+        Try WiFi connection at 26...Success!
+        Try WiFi connection at 25...Success!
+        Try WiFi connection at 24...Success!
+        Try WiFi connection at 23...Success!
+        Try WiFi connection at 22...Success!
+        Try WiFi connection at 21...Success!
+        Try WiFi connection at 20...Success!
+    */
+    WiFi.setTxPower((wifi_power_t)30);
     // WiFi.setTxPower(WIFI_POWER_11dBm);
     //  while (WiFi.waitForConnectResult() != WL_CONNECTED)
-    INFOLN("Wait wifi for connect");
-    uint16_t retry_times = 30;
+    INFOLN("Wait wifi for connect.....");
+    uint16_t retry_times = 100;
     while ((WiFi.status() != WL_CONNECTED) && (retry_times != 0))
     {
         // ERR("Connection Failed! Rebooting...%d", status);
-        INFO("Sleep 1s and retry(%s)...\n", ssid);
+        INFO("Sleep 1s and retry_(%d) connect (%s)...\n", retry_times, ssid);
         retry_times--;
         delay(1000);
         // ESP.restart();
     }
     if ((retry_times == 0) && (WiFi.status() != WL_CONNECTED))
     {
-        ERR("Wifi not connect OTA not use\n");
+        ERR("Wifi not connect OTA not use Restart system...\n");
+        ESP.restart();
         return false;
     }
+    if (!MDNS.begin("esp32s3"))
+    { // 开始mDNS服务
+        Serial.println("Error starting mDNS");
+        return false;
+    }
+    MDNS.addService("http", "tcp", 80); // 添加HTTP服务
+    INFO("Start open MDNS Success...\n");
+    // ArduinoOTA.setPort(3232);
     ArduinoOTA.onStart([]()
                        {
         String type;
@@ -67,6 +102,7 @@ bool HAL::OTA_Init()
     INFOLN("IP address: ");
     INFOLN(WiFi.localIP());
     Current_IP_Address = WiFi.localIP().toString();
+    Serial.setDebugOutput(false);
     return true;
 }
 void HAL::OTA_Update()

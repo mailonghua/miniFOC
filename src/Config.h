@@ -4,8 +4,8 @@
 #define SIMPLEFOC_DEBUG_ENABLE 0
 
 // 串口接收选择
-// 定义：使用自定义的串口的指令
-// 未定义：使用SimpleFOC的指令处理
+// 1：使用自定义的串口的指令
+// 0：使用SimpleFOC的指令处理
 #define UART_RECEIVE_SELF_METHORD 1
 
 // I2C

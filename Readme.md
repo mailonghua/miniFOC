@@ -1,18 +1,8 @@
 # FOC
 
-## 1.将文件夹提交到一个新创建的github服务器
+## 1.说明
 
-```bash
-echo "# miniFOC" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/mailonghua/miniFOC.git
-git push -u origin main
-```
-
-
+本项目基于实现FOC电流环控制，同时包含CAN反馈、UART控制，同时支持OTA，曲线绘制、NVS参数保存等，同时支持速度环和位置环的demo演示
 
 ## 2.CAN协议
 
@@ -82,3 +72,20 @@ git push -u origin main
 1.OTA升级后再使用USB刷新固件
 
 如果在使用了OTA进行升级后，再使用USB进行固件刷新，请先试用platormIO的清除整个Flash再刷新才会生效，OTA在更新时会修改使能缓冲区
+
+2.清空eps32S3 Flash
+
+ python -m esptool --chip esp32-S3  erase_flash
+
+3.提交
+
+```
+echo "# miniFOC" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/mailonghua/miniFOC.git
+git push -u origin main
+```
+

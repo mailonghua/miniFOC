@@ -112,7 +112,7 @@ void foc_current_init(int direction = -1, float angle = -1)
   // 电流环的q和d的PID
   motor.PID_current_q.P = 30; // 5;
   motor.PID_current_q.I = 25; // 300;
-  motor.PID_current_q.D = 1;  // 添加了D后，打开后电机,在打开串口条件下，启动会有转动
+  motor.PID_current_q.D = 1.5;  // 添加了D后，打开后电机,在打开串口条件下，启动会有转动
   motor.PID_current_d.P = 18; // 5;
   motor.PID_current_d.I = 30; // 300;
   motor.PID_current_d.D = 1;  // 打开后电机启动，在打开串口条件下，会有异常转动
@@ -144,6 +144,7 @@ void foc_current_init(int direction = -1, float angle = -1)
   }
   // motor.sensor_direction = CW;
   // motor.zero_electric_angle = 5.42;
+  current_sense.skip_align = true; // 其中一个电机需要实时校准，因此就直接关闭了电流的校准
   simpleFOCInitFlag = motor.initFOC();
   if (simpleFOCInitFlag == 0)
   {

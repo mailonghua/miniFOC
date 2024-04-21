@@ -70,6 +70,7 @@ void Start_UserTask()
 void setup()
 {
   Serial.begin(115200);
+  INFO("Motor System start...\n");
   HAL::HAL_Init();
   Start_UserTask();
 }
