@@ -110,12 +110,12 @@ void foc_current_init(int direction = -1, float angle = -1)
   motor.torque_controller = TorqueControlType::foc_current; // foc电流力矩控制
   motor.controller = MotionControlType::torque;
   // 电流环的q和d的PID
-  motor.PID_current_q.P = 30; // 5;
-  motor.PID_current_q.I = 25; // 300;
-  motor.PID_current_q.D = 1.5;  // 添加了D后，打开后电机,在打开串口条件下，启动会有转动
-  motor.PID_current_d.P = 18; // 5;
-  motor.PID_current_d.I = 30; // 300;
-  motor.PID_current_d.D = 1;  // 打开后电机启动，在打开串口条件下，会有异常转动
+  motor.PID_current_q.P = 30;  // 5;
+  motor.PID_current_q.I = 25;  // 300;
+  motor.PID_current_q.D = 1.5; // 添加了D后，打开后电机,在打开串口条件下，启动会有转动
+  motor.PID_current_d.P = 18;  // 5;
+  motor.PID_current_d.I = 30;  // 300;
+  motor.PID_current_d.D = 1;   // 打开后电机启动，在打开串口条件下，会有异常转动
   //  低通滤波器
   motor.LPF_current_q.Tf = 0.5;
   motor.LPF_current_d.Tf = 0.5;
@@ -373,7 +373,7 @@ void HAL::Motor_SwitchMode(UART_RECEIVE_COMMAND mode)
     motor.LPF_velocity.Tf = 0.02;
     motor.voltage_limit = 12;
     // 角度环PID参数设置
-    motor.P_angle.P = 20;
+    motor.P_angle.P = 40;
     motor.P_angle.I = 0;
     motor.P_angle.D = 0;
     motor.LPF_angle.Tf = 0;
