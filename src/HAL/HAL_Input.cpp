@@ -1,4 +1,9 @@
 #include "HAL.h"
+static enum UART_RECEIVE_COMMAND currentMotorStatus = CHOOSE_MOTOR_CURRENT_MODE;
+UART_RECEIVE_COMMAND HAL::Get_CurrentMotorStatus()
+{
+    return currentMotorStatus;
+}
 /*按键输入*/
 void HAL::StartInputKetDetectTask()
 {
@@ -137,14 +142,17 @@ static void Uart_Receive_Case_Switch()
         break;
     case CHOOSE_MOTOR_CURRENT_MODE:
         INFOLN("Set motor for current mode");
+        currentMotorStatus = CHOOSE_MOTOR_CURRENT_MODE;
         HAL::Motor_SwitchMode(CHOOSE_MOTOR_CURRENT_MODE);
         break;
     case CHOOSE_MOTOR_VELOCITY_MODE:
         INFOLN("Set motor for velocity mode");
+        currentMotorStatus = CHOOSE_MOTOR_VELOCITY_MODE;
         HAL::Motor_SwitchMode(CHOOSE_MOTOR_VELOCITY_MODE);
         break;
     case CHOOSE_MOTOR_POSITION_MODE:
         INFOLN("Set motor for position mode");
+        currentMotorStatus = CHOOSE_MOTOR_POSITION_MODE;
         HAL::Motor_SwitchMode(CHOOSE_MOTOR_POSITION_MODE);
         break;
     case SET_MOTOR_TARGET:

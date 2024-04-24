@@ -1,5 +1,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
+// 系统检测线程阈值
+#define ESP32S3FH4R2_TMP 90
 // 控制用simpleFOC Studio的串口输出控制
 #define SIMPLEFOC_DEBUG_ENABLE 0
 

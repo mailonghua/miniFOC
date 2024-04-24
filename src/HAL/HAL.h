@@ -138,5 +138,6 @@ namespace HAL
     // 输入的外设控制
     void StartInputKetDetectTask();
     void Uart_Receive_IRQ_Register();
+    UART_RECEIVE_COMMAND Get_CurrentMotorStatus();
 }
 #endif
