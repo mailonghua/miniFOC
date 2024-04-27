@@ -61,6 +61,7 @@ void loop()
 /*FOC算法-电机控制线程函数*/
 void Start_MotorTask(void *)
 {
+  INFO("MotorTask thread create success...\n");
   INIT_TASK_TIME(1);
   while (1)
   {
@@ -86,7 +87,7 @@ void Start_SysMonitoringThread(void *)
         HAL::playSysMusic(SYS_INTERNAL_ERROR);
         vTaskDelay(pdMS_TO_TICKS(1000));
       }
-      ERR("The current chip temperature is too high and the motor disable...\n");
+      ERR("The current chip temperature is too high(%f) and the motor disable...\n", mcuTemp);
     }
     // 根据模式进行判断
     switch (HAL::Get_CurrentMotorStatus())
@@ -99,17 +100,18 @@ void Start_SysMonitoringThread(void *)
         HAL::Motor_GetCurrentState(data);
         if ((data.target == 0) && (data.toque_q > 0.2))
         {
-          vTaskDelay(pdMS_TO_TICKS(1000));
+          vTaskDelay(pdMS_TO_TICKS(4000));
           if ((data.target == 0) && (data.toque_q > 0.2))
           {
+            HAL::Motor_Disable();
             // 蜂鸣器提醒
             for (int i = 0; i < 3; i++)
             {
               HAL::playSysMusic(SYS_INTERNAL_ERROR);
-              vTaskDelay(pdMS_TO_TICKS(500));
+              vTaskDelay(pdMS_TO_TICKS(1000));
             }
-            HAL::Motor_Disable();
-            ERR("The motor rotates abnormally, turn off the motor...\n");
+            ERR("The motor rotates abnormally(%f,%f), turn off the motor...\n", data.target, data.toque_q);
+            REBOOT_SYS();
           }
         }
       }
@@ -134,7 +136,7 @@ void Start_UserTask()
   HAL::StartSystemStateDetectTask();
   HAL::StartInputKetDetectTask();
   vTaskDelay(pdMS_TO_TICKS(1000));
-  xTaskCreate(Start_MotorTask, "MotorUpdate", 4096, NULL, 1, NULL);               // 当前阶段最高优先级
+  // xTaskCreate(Start_MotorTask, "MotorUpdate", 4096, NULL, 1, NULL);               // 当前阶段最高优先级
   xTaskCreate(Start_SysMonitoringThread, "SysStatusDetect", 4096, NULL, 0, NULL); // 系统检测线程
   INFO("The number of threads currently startd is %d\n", uxTaskGetNumberOfTasks());
 }
@@ -149,7 +151,7 @@ void setup()
 
 void loop()
 {
-  // HAL::Motor_Update(NULL);
+  HAL::Motor_Update(NULL);
   HAL::HAL_Update();
 }
 #endif

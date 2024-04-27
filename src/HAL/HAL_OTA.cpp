@@ -41,7 +41,7 @@ bool HAL::OTA_Init()
         Try WiFi connection at 21...Success!
         Try WiFi connection at 20...Success!
     */
-    WiFi.setTxPower((wifi_power_t)30);
+    WiFi.setTxPower((wifi_power_t)27);
     // WiFi.setTxPower(WIFI_POWER_11dBm);
     //  while (WiFi.waitForConnectResult() != WL_CONNECTED)
     INFOLN("Wait wifi for connect.....");
