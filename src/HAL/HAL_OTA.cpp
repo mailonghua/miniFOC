@@ -61,7 +61,7 @@ bool HAL::OTA_Init()
     }
     if (!MDNS.begin("esp32s3"))
     { // 开始mDNS服务
-        Serial.println("Error starting mDNS");
+        INFOLN("Error starting mDNS");
         return false;
     }
     MDNS.addService("http", "tcp", 80); // 添加HTTP服务
@@ -101,7 +101,7 @@ bool HAL::OTA_Init()
     INFOLN("IP address: ");
     INFOLN(WiFi.localIP());
     Current_IP_Address = WiFi.localIP().toString();
-    Serial.setDebugOutput(false);
+
     return true;
 }
 void HAL::OTA_Update()

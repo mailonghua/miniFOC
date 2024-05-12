@@ -8,7 +8,7 @@ static MagneticSensorI2C as5600 = MagneticSensorI2C(AS5600_I2C);
 static BLDCMotor motor = BLDCMotor(7);
 static BLDCDriver3PWM driver = BLDCDriver3PWM(5, 6, 7, 4);
 static InlineCurrentSense current_sense = InlineCurrentSense(0.01f, 50.f, 13, 14);
-static Commander command = Commander(Serial);
+static Commander command = Commander(UART_RECV_CTL());
 // 用于存储simplefoc初始化状态,如初始化失败则停止foc的算法执行，并disable motor
 static int simpleFOCInitFlag = 0; //: 0：代表正常1：代表异常，用于循环检测的判断异常
 
@@ -38,11 +38,11 @@ int current_sense_init()
 {
   if (current_sense.init())
   {
-    Serial.println("Current sense init success!");
+    INFOLN("Current sense init success!");
   }
   else
   {
-    Serial.println("Current sense init failed!");
+    INFOLN("Current sense init failed!");
     return 1;
   }
   // 结合硬件，可以看到当前的版本的B相的检测电阻和检测引脚方向是反的，因此这里取反
@@ -120,7 +120,7 @@ void foc_current_init(int direction = -1, float angle = -1)
   motor.LPF_current_q.Tf = 0.5;
   motor.LPF_current_d.Tf = 0.5;
   motor.current_limit = 1.0;
-  motor.useMonitoring(Serial);
+  motor.useMonitoring(UART_RECV_CTL());
   // 初始化电机
   motor.init();
   simpleFOCInitFlag = current_sense_init(); // 初始化电流传感器--ADC的校准和偏差计算
@@ -144,7 +144,7 @@ void foc_current_init(int direction = -1, float angle = -1)
   }
   // motor.sensor_direction = CW;
   // motor.zero_electric_angle = 5.42;
-  current_sense.skip_align = true; // 其中一个电机需要实时校准，因此就直接关闭了电流的校准
+  // current_sense.skip_align = true; // 其中一个电机需要实时校准，否则电流校准就会失败，因此就直接关闭了电流的校准【旧型号的BM3510需要打开该注释跳过对齐初始化】
   simpleFOCInitFlag = motor.initFOC();
   if (simpleFOCInitFlag == 0)
   {
@@ -196,7 +196,7 @@ void foc_speed_init(int direction = -1, float angle = -1)
   // motor.P_angle.P = 20;
   // motor.P_angle.I = 0;
   // motor.P_angle.D = 0;
-  motor.useMonitoring(Serial);
+  motor.useMonitoring(UART_RECV_CTL());
   // 初始化电机
   motor.init();
 
@@ -265,7 +265,7 @@ void foc_position_init(int direction = -1, float angle = -1)
   motor.P_angle.I = 0;
   motor.P_angle.D = 0;
   motor.LPF_angle.Tf = 0;
-  motor.useMonitoring(Serial);
+  motor.useMonitoring(UART_RECV_CTL());
   // 初始化电机
   motor.init();
 

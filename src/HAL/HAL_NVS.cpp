@@ -8,17 +8,17 @@ void test()
     bool writeSuccessful = HAL::put_float("temperature", temperature);
     if (writeSuccessful)
     {
-        Serial.println("Temperature stored successfully.");
+        INFOLN("Temperature stored successfully.");
     }
     else
     {
-        Serial.println("Failed to store temperature.");
+        INFOLN("Failed to store temperature.");
     }
 
     // 读取浮点数
     float storedTemperature = HAL::get_float("temperature", -1.0); // 默认值为-1.0
-    Serial.print("Stored temperature is: ");
-    Serial.println(storedTemperature);
+    INFO("Stored temperature is: ");
+    INFOLN(storedTemperature);
 }
 int HAL::NVS_Init()
 {

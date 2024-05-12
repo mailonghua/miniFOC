@@ -83,6 +83,7 @@ enum UART_RECEIVE_COMMAND
     SET_MOTOR_TARGET = 0x5454,           // 0x5454:对应的ASCII是TT 设置当前电机的目标 0x5511 + 2Byte(电机的目标(只能设置整数))
     SET_MOTOR_CAN_ID = 0x4944,           // 设置电机的CAN ID,指令对应的字符串：ID
     SET_SYSTEM_REBOOT = 0x5513,          // 让电机系统重启
+    GET_SYSTEM_VERSION = 0x5514,         // 获取编译版本号
 
 };
 

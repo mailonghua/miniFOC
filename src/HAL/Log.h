@@ -48,11 +48,25 @@ enum debug_level {
 
 /* it can be change to others, such as file operations */
 #include <stdio.h>
-#define UART_WRITE          Serial.write
-#define UART_READ           Serial.read
-#define PRINT               Serial.printf
-#define PRINTLN             Serial.println
-#define LOG_UART_AVAILABLE  Serial.available
+
+#define SERIAL0 Serial
+#define SERIAL1 Serial1
+
+#define SERIAL_INIT(baudrate) \
+           SERIAL0.begin(baudrate);\
+           SERIAL1.begin(baudrate, SERIAL_8N1, 18, 17);
+
+#define UART_WRITE          SERIAL0.write
+#define UART_READ           SERIAL0.read
+#define PRINT               SERIAL0.printf
+#define PRINTLN             SERIAL0.println
+#define LOG_UART_AVAILABLE  SERIAL0.available
+
+#define UART_1_WRITE          SERIAL1.write
+#define UART_1_READ           SERIAL1.read
+#define PRINT_1               SERIAL1.printf
+#define PRINTLN_1             SERIAL1.println
+#define LOG_UART_AVAILABLE_1  SERIAL1.available
 
 #define VOFA_UART_WRITE     Serial1.write
 #define VOFA_UART_READ      Serial1.read
@@ -67,6 +81,8 @@ enum debug_level {
 do {                                                    \
     PRINT("ASSERT: %s %s %d",                           \
            __FILE__, __FUNCTION__, __LINE__);           \
+    PRINT_1("ASSERT: %s %s %d",                           \
+           __FILE__, __FUNCTION__, __LINE__);           \
     while (1);                                          \
 } while (0)
 
@@ -75,6 +91,8 @@ do {                                                    \
     if (debug >= DEBUG_LEVEL_ERR) {                     \
         PRINT("[Error]");                               \
         PRINT(__VA_ARGS__);                             \
+        PRINT_1("[Error]");                               \
+        PRINT_1(__VA_ARGS__);                             \
     }                                                   \
 } while (0)
 
@@ -83,6 +101,8 @@ do {                                                    \
     if (debug >= DEBUG_LEVEL_INFO) {                    \
         PRINT("[INFO]");                                \
         PRINT(__VA_ARGS__);                             \
+        PRINT_1("[INFO]");                                \
+        PRINT_1(__VA_ARGS__);                             \
     }                                                   \
 } while (0)
 #define INFOLN(...)                                     \
@@ -90,12 +110,15 @@ do {                                                    \
     if (debug >= DEBUG_LEVEL_INFO) {                    \
         PRINT("[INFO]");                                \
         PRINTLN(__VA_ARGS__);                             \
+        PRINT_1("[INFO]");                                \
+        PRINTLN_1(__VA_ARGS__);                             \
     }                                                   \
 } while (0)
 #define DEBUG(...)                                      \
 do {                                                    \
     if (debug >= DEBUG_LEVEL_DEBUG) {                   \
         PRINT(__VA_ARGS__);                             \
+        PRINT_1(__VA_ARGS__);                             \
     }                                                   \
 } while (0)
 #define DRAW_LINE(...)

@@ -1,5 +1,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
+#include "version.h"
+// 定义串口控制的UART --用于决定串口输入控制使用那个串口，关于串口的初始化定义在Log.h文件中
+#define UART_RECV_CTL() Serial
 // 系统检测线程阈值
 #define ESP32S3FH4R2_TMP 90
 // 控制用simpleFOC Studio的串口输出控制

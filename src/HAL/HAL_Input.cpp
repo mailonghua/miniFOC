@@ -79,18 +79,18 @@ static TaskHandle_t waveDebugHandle;
 static bool waveDebugFlag = false;
 static void Uart_Receive_Case_Switch()
 {
-    uint16_t size = Serial.available();
+    uint16_t size = UART_RECV_CTL().available();
     // 1.判断数据大小
     if (size < 2)
     {
-        ERR("Receive uart data error size:%d,data:0x%x\n", size, Serial.read());
+        ERR("Receive uart data error size:%d,data:0x%x\n", size, UART_RECV_CTL().read());
         return;
     }
     uint8_t *bufferPtr = static_cast<uint8_t *>(malloc(size));
     // 2.获取指令的数据
     if (bufferPtr != NULL)
     {
-        Serial.read(bufferPtr, size);
+        UART_RECV_CTL().read(bufferPtr, size);
     }
     else
     {
@@ -107,7 +107,7 @@ static void Uart_Receive_Case_Switch()
     case GET_SYS_STATE_CMD:
         INFOLN("Get system state...");
         feedBackStr[2] = HAL::getSysState();
-        Serial.write(feedBackStr, 3);
+        UART_RECV_CTL().write(feedBackStr, 3);
         break;
     case CLOSE_WIFI_PWR_CMD:
     case OPEN_WIFI_PWR_CMD:
@@ -115,7 +115,7 @@ static void Uart_Receive_Case_Switch()
         feedBackStr[1] = 0x01;
         feedBackStr[2] = 0x0;
         HAL::OTA_SwitchStatus();
-        Serial.write(feedBackStr, 3);
+        UART_RECV_CTL().write(feedBackStr, 3);
         break;
 
     case CLEAR_NVS_CMD:
@@ -125,7 +125,7 @@ static void Uart_Receive_Case_Switch()
         HAL::NVS_Init();
         HAL::NVC_Clear();
         HAL::NVS_End();
-        Serial.write(feedBackStr, 3);
+        UART_RECV_CTL().write(feedBackStr, 3);
         break;
     case OPEN_BLE_PWR_CMD:
         /* code */
@@ -192,14 +192,14 @@ static void Uart_Receive_Case_Switch()
                     {
                         HAL::MOTOR_RawData_t data;
                         HAL::Motor_GetCurrentState(data);
-                        Serial.printf("%f,%f,%f,%f,%f,%f,%f\n",
-                                      data.target,
-                                      data.shaft_angle,
-                                      data.electrical_angle,
-                                      data.speed,
-                                      data.toque_q,
-                                      data.toque_d,
-                                      data.tempetature);
+                        UART_RECV_CTL().printf("%f,%f,%f,%f,%f,%f,%f\n",
+                                               data.target,
+                                               data.shaft_angle,
+                                               data.electrical_angle,
+                                               data.speed,
+                                               data.toque_q,
+                                               data.toque_d,
+                                               data.tempetature);
                         WAIT_TASK_TIME();
                     }
                     INFOLN("Close motor wave debug thread complete");
@@ -251,13 +251,19 @@ static void Uart_Receive_Case_Switch()
     }
 
     break;
+    case GET_SYSTEM_VERSION:
+    {
+        const char *verStr = FIRMWARE_VERSION;
+        INFO("SystemVersion:%s\n", verStr);
+        break;
+    }
     default:
         ERR("Not match cmd(0x%x) receive data:\n", cmd);
         for (int i = 0; i < size; i++)
         {
-            Serial.printf("0x%x ", bufferPtr[i]);
+            UART_RECV_CTL().printf("0x%x ", bufferPtr[i]);
         }
-        Serial.printf("\n------\n");
+        UART_RECV_CTL().printf("\n------\n");
         break;
     }
     // 释放内存
@@ -266,6 +272,6 @@ static void Uart_Receive_Case_Switch()
 /*串口输入的初始化*/
 void HAL::Uart_Receive_IRQ_Register()
 {
-    Serial.onReceive(Uart_Receive_Case_Switch);
+    UART_RECV_CTL().onReceive(Uart_Receive_Case_Switch);
     INFOLN("Register uart receive callback complete...");
 }
