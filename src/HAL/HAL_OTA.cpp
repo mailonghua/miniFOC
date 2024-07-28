@@ -9,7 +9,7 @@
 const char *ssid = STASSID;
 const char *password = STAPSK;
 String Current_IP_Address = "NUll"; // 当前IP地址
-bool HAL::OTA_Init()
+bool HAL::OTA_Init(bool &retry)
 {
     esp_wifi_set_ps(WIFI_PS_NONE); // 关闭WIFI的省点模式
     WiFi.useStaticBuffers(true);
@@ -45,8 +45,8 @@ bool HAL::OTA_Init()
     // WiFi.setTxPower(WIFI_POWER_11dBm);
     //  while (WiFi.waitForConnectResult() != WL_CONNECTED)
     INFOLN("Wait wifi for connect.....");
-    uint16_t retry_times = 100;
-    while ((WiFi.status() != WL_CONNECTED) && (retry_times != 0))
+    uint16_t retry_times = 10;
+    while ((WiFi.status() != WL_CONNECTED) && (retry_times != 0) && (retry == true))
     {
         // ERR("Connection Failed! Rebooting...%d", status);
         INFO("Sleep 1s and retry_(%d) connect (%s)...\n", retry_times, ssid);
@@ -56,7 +56,7 @@ bool HAL::OTA_Init()
     if ((retry_times == 0) && (WiFi.status() != WL_CONNECTED))
     {
         ERR("Wifi not connect OTA not use Restart system...\n");
-        REBOOT_SYS();
+        // REBOOT_SYS();
         return false;
     }
     if (!MDNS.begin("esp32s3"))
@@ -122,7 +122,7 @@ void HAL::OTA_SwitchStatus()
             {
                 INFOLN("OTA thread create success...");
 
-                bool ret = HAL::OTA_Init();
+                bool ret = HAL::OTA_Init(otaStatus);
                 if (ret == false)
                 {
                     changeShowSysMode(WIFI_NO_CONNECT);

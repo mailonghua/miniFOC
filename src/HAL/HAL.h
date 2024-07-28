@@ -101,7 +101,7 @@ namespace HAL
     void StartSystemStateDetectTask();          // 线程调用的函数
     void changeShowSysMode(SYS_STATE_SELECT);   // 改变LED工作的状态
     // OTA
-    bool OTA_Init();
+    bool OTA_Init(bool &retry);
     void OTA_Update();
     void OTA_SwitchStatus();
 

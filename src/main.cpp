@@ -41,7 +41,7 @@ void Start_SysMonitoringThread(void *)
         HAL::Motor_GetCurrentState(data);
         if ((data.target == 0) && (data.toque_q > 0.2))
         {
-          vTaskDelay(pdMS_TO_TICKS(4000));
+          vTaskDelay(pdMS_TO_TICKS(5000));
           if ((data.target == 0) && (data.toque_q > 0.2))
           {
             HAL::Motor_Disable();
@@ -96,7 +96,7 @@ void setup()
   //   ERR("This is err test");
   // }
   const char *version = FIRMWARE_VERSION;
-  INFO("Motor System(%s) start...\n", version);
+  INFO("Motor(%d) System(%s) start...\n", HAL::CAN_GetCurrentMotorID(), version);
   HAL::HAL_Init();
   Start_UserTask();
 }

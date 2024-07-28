@@ -77,201 +77,223 @@ static UART_RECEIVE_COMMAND currentCMD; // 当前指令
 // 用于波形debug
 static TaskHandle_t waveDebugHandle;
 static bool waveDebugFlag = false;
-static void Uart_Receive_Case_Switch()
+
+static bool receive_data_flag = false;
+// 中断回调函数
+static void Uart_Receive_ISR()
 {
-    uint16_t size = UART_RECV_CTL().available();
-    // 1.判断数据大小
-    if (size < 2)
-    {
-        ERR("Receive uart data error size:%d,data:0x%x\n", size, UART_RECV_CTL().read());
-        return;
-    }
-    uint8_t *bufferPtr = static_cast<uint8_t *>(malloc(size));
-    // 2.获取指令的数据
-    if (bufferPtr != NULL)
-    {
-        UART_RECV_CTL().read(bufferPtr, size);
-    }
-    else
-    {
-        ERR("Uart receive buffer error, programe return...\n");
-        return;
-    }
-    // 3.处理数据
-    // 串口发送的数据高字节先发送，低字节后发送
-    uint16_t cmd = bufferPtr[0];
-    cmd = cmd << 8 | bufferPtr[1];
+    receive_data_flag = true;
+}
+static void Uart_Receive_Case_Switch(void *pvParameters)
+{
+    INFOLN("Create Uart_Receive_Case_Switch success....");
+    INIT_TASK_TIME(500);
 
-    switch (cmd)
+    while (1)
     {
-    case GET_SYS_STATE_CMD:
-        INFOLN("Get system state...");
-        feedBackStr[2] = HAL::getSysState();
-        UART_RECV_CTL().write(feedBackStr, 3);
-        break;
-    case CLOSE_WIFI_PWR_CMD:
-    case OPEN_WIFI_PWR_CMD:
-        INFOLN("Switch wifi state...");
-        feedBackStr[1] = 0x01;
-        feedBackStr[2] = 0x0;
-        HAL::OTA_SwitchStatus();
-        UART_RECV_CTL().write(feedBackStr, 3);
-        break;
-
-    case CLEAR_NVS_CMD:
-        INFOLN("Clear NVS parameter...");
-        feedBackStr[1] = 0x03;
-        feedBackStr[2] = 0x0;
-        HAL::NVS_Init();
-        HAL::NVC_Clear();
-        HAL::NVS_End();
-        UART_RECV_CTL().write(feedBackStr, 3);
-        break;
-    case OPEN_BLE_PWR_CMD:
-        /* code */
-        break;
-    case CLOSE_BLE_PWR_CMD:
-        /* code */
-        break;
-    case SET_WIFI_SSID_PASSWD:
-        /* code */
-        break;
-    case DISABLE_MOTOR_DISABLE:
-        INFOLN("Disable Motor...");
-        HAL::Motor_Disable();
-        break;
-    case CHOOSE_MOTOR_CURRENT_MODE:
-        INFOLN("Set motor for current mode");
-        currentMotorStatus = CHOOSE_MOTOR_CURRENT_MODE;
-        HAL::Motor_SwitchMode(CHOOSE_MOTOR_CURRENT_MODE);
-        break;
-    case CHOOSE_MOTOR_VELOCITY_MODE:
-        INFOLN("Set motor for velocity mode");
-        currentMotorStatus = CHOOSE_MOTOR_VELOCITY_MODE;
-        HAL::Motor_SwitchMode(CHOOSE_MOTOR_VELOCITY_MODE);
-        break;
-    case CHOOSE_MOTOR_POSITION_MODE:
-        INFOLN("Set motor for position mode");
-        currentMotorStatus = CHOOSE_MOTOR_POSITION_MODE;
-        HAL::Motor_SwitchMode(CHOOSE_MOTOR_POSITION_MODE);
-        break;
-    case SET_MOTOR_TARGET:
-    {
-        INFO("Set motor target(%d)...\n", size);
-        if (size <= 2)
+        if (receive_data_flag == true)
         {
-            ERR("No valid target data...\n");
-            for (int i = 0; i < size; i++)
+            uint16_t size = UART_RECV_CTL().available();
+            // 1.判断数据大小
+            if (size < 2)
             {
-                INFO("0x%x ", bufferPtr[i]);
+                ERR("Receive uart data error size:%d,data:0x%x\n", size, UART_RECV_CTL().read());
+                return;
             }
-            break;
-        }
-        char *dataPtr = static_cast<char *>(malloc(size - 1));
-        for (int i = 2; i < size; i++)
-        {
-            dataPtr[i - 2] = static_cast<char>(bufferPtr[i]);
-        }
-        dataPtr[size - 2] = '\0'; // 使用atof需要手动添加结束符
-        INFO("Receive motor target:%s\n", dataPtr);
-        HAL::Motor_SetTarget(atof(dataPtr));
-        free(dataPtr);
-        break;
-    }
-    case OPEN_MOTOR_WAVAE_DEBUG:
-    {
-        if (waveDebugFlag == false)
-        {
-            xTaskCreate(
-                [](void *)
+            uint8_t *bufferPtr = static_cast<uint8_t *>(malloc(size));
+            // 2.获取指令的数据
+            if (bufferPtr != NULL)
+            {
+                UART_RECV_CTL().read(bufferPtr, size);
+            }
+            else
+            {
+                ERR("Uart receive buffer error, programe return...\n");
+                return;
+            }
+            // 3.处理数据
+            // 串口发送的数据高字节先发送，低字节后发送
+            uint16_t cmd = bufferPtr[0];
+            cmd = cmd << 8 | bufferPtr[1];
+
+            switch (cmd)
+            {
+            case GET_SYS_STATE_CMD:
+                INFOLN("Get system state...");
+                feedBackStr[2] = HAL::getSysState();
+                UART_RECV_CTL().write(feedBackStr, 3);
+                break;
+            case CLOSE_WIFI_PWR_CMD:
+            case OPEN_WIFI_PWR_CMD:
+                INFOLN("Switch wifi state...");
+                feedBackStr[1] = 0x01;
+                feedBackStr[2] = 0x0;
+                HAL::OTA_SwitchStatus();
+                UART_RECV_CTL().write(feedBackStr, 3);
+                break;
+
+            case CLEAR_NVS_CMD:
+                INFOLN("Clear NVS parameter...");
+                feedBackStr[1] = 0x03;
+                feedBackStr[2] = 0x0;
+                HAL::NVS_Init();
+                HAL::NVC_Clear();
+                HAL::NVS_End();
+                UART_RECV_CTL().write(feedBackStr, 3);
+                sleep(1);
+                REBOOT_SYS();
+                break;
+            case OPEN_BLE_PWR_CMD:
+                /* code */
+                break;
+            case CLOSE_BLE_PWR_CMD:
+                /* code */
+                break;
+            case SET_WIFI_SSID_PASSWD:
+                /* code */
+                break;
+            case DISABLE_MOTOR_DISABLE:
+                INFOLN("Disable Motor...");
+                HAL::Motor_Disable();
+                break;
+            case CHOOSE_MOTOR_CURRENT_MODE:
+                INFOLN("Set motor for current mode");
+                currentMotorStatus = CHOOSE_MOTOR_CURRENT_MODE;
+                HAL::Motor_SwitchMode(CHOOSE_MOTOR_CURRENT_MODE);
+                break;
+            case CHOOSE_MOTOR_VELOCITY_MODE:
+                INFOLN("Set motor for velocity mode");
+                currentMotorStatus = CHOOSE_MOTOR_VELOCITY_MODE;
+                HAL::Motor_SwitchMode(CHOOSE_MOTOR_VELOCITY_MODE);
+                break;
+            case CHOOSE_MOTOR_POSITION_MODE:
+                INFOLN("Set motor for position mode");
+                currentMotorStatus = CHOOSE_MOTOR_POSITION_MODE;
+                HAL::Motor_SwitchMode(CHOOSE_MOTOR_POSITION_MODE);
+                break;
+            case SET_MOTOR_TARGET:
+            {
+                INFO("Set motor target(%d)...\n", size);
+                if (size <= 2)
                 {
-                    waveDebugFlag = true;
-                    INFOLN("Motor wave debug thread create success...");
-                    INIT_TASK_TIME(50);
-                    while (waveDebugFlag)
+                    ERR("No valid target data...\n");
+                    for (int i = 0; i < size; i++)
                     {
-                        HAL::MOTOR_RawData_t data;
-                        HAL::Motor_GetCurrentState(data);
-                        UART_RECV_CTL().printf("%f,%f,%f,%f,%f,%f,%f\n",
-                                               data.target,
-                                               data.shaft_angle,
-                                               data.electrical_angle,
-                                               data.speed,
-                                               data.toque_q,
-                                               data.toque_d,
-                                               data.tempetature);
-                        WAIT_TASK_TIME();
+                        INFO("0x%x ", bufferPtr[i]);
                     }
-                    INFOLN("Close motor wave debug thread complete");
-                    vTaskDelete(NULL);
-                },
-                "motor_debug_thread", 4096, NULL, 0, &waveDebugHandle);
-        }
-        else
-        {
-            INFOLN("Start Close motor wave debug thread");
-            waveDebugFlag = false;
-        }
-    }
-    case SET_MOTOR_CAN_ID:
-    {
-        INFO("Set motor CAN ID\n");
-        if (size <= 2)
-        {
-            ERR("No valid target data...\n");
-            for (int i = 0; i < size; i++)
-            {
-                INFO("0x%x ", bufferPtr[i]);
+                    break;
+                }
+                char *dataPtr = static_cast<char *>(malloc(size - 1));
+                for (int i = 2; i < size; i++)
+                {
+                    dataPtr[i - 2] = static_cast<char>(bufferPtr[i]);
+                }
+                dataPtr[size - 2] = '\0'; // 使用atof需要手动添加结束符
+                INFO("Receive motor target:%s\n", dataPtr);
+                HAL::Motor_SetTarget(atof(dataPtr));
+                free(dataPtr);
+                break;
             }
-            break;
-        }
-        char *dataPtr = static_cast<char *>(malloc(size - 1));
-        for (int i = 2; i < size; i++)
-        {
-            dataPtr[i - 2] = static_cast<char>(bufferPtr[i]);
-        }
-        dataPtr[size - 2] = '\0'; // 使用atof需要手动添加结束符
-        INFO("Receive motor ID:%s\n", dataPtr);
-        // 设置CAN ID并且更新NVS，并进行重启
-        HAL::NVS_Init(); // 打开NVS
-        int32_t canID = atoi(dataPtr);
-        HAL::CAN_GetCurrentMotorID() = canID;
-        HAL::put_int("CAN_ID", canID);
-        HAL::NVS_End(); // 关闭NVS
-        free(dataPtr);
-        INFO("Motor system reboot Set CAN ID=0x%x\n", canID);
-        REBOOT_SYS();
-    }
-    case SET_SYSTEM_REBOOT:
-    {
-        INFO("Motor system reboot\n");
-        HAL::Motor_Disable();
-        sleep(1);
-        REBOOT_SYS();
-    }
+            case OPEN_MOTOR_WAVAE_DEBUG:
+            {
+                if (waveDebugFlag == false)
+                {
+                    xTaskCreate(
+                        [](void *)
+                        {
+                            waveDebugFlag = true;
+                            INFOLN("Motor wave debug thread create success...");
+                            INIT_TASK_TIME(50);
+                            while (waveDebugFlag)
+                            {
+                                HAL::MOTOR_RawData_t data;
+                                HAL::Motor_GetCurrentState(data);
+                                UART_RECV_CTL().printf("%f,%f,%f,%f,%f,%f,%f\n",
+                                                       data.target,
+                                                       data.shaft_angle,
+                                                       data.electrical_angle,
+                                                       data.speed,
+                                                       data.toque_q,
+                                                       data.toque_d,
+                                                       data.tempetature);
+                                WAIT_TASK_TIME();
+                            }
+                            INFOLN("Close motor wave debug thread complete");
+                            vTaskDelete(NULL);
+                        },
+                        "motor_debug_thread", 4096, NULL, 0, &waveDebugHandle);
+                }
+                else
+                {
+                    INFOLN("Start Close motor wave debug thread");
+                    waveDebugFlag = false;
+                }
+            }
+            case SET_MOTOR_CAN_ID:
+            {
+                INFO("Set motor CAN ID\n");
+                if (size <= 2)
+                {
+                    ERR("No valid target data...\n");
+                    for (int i = 0; i < size; i++)
+                    {
+                        INFO("0x%x ", bufferPtr[i]);
+                    }
+                    break;
+                }
+                char *dataPtr = static_cast<char *>(malloc(size - 1));
+                for (int i = 2; i < size; i++)
+                {
+                    dataPtr[i - 2] = static_cast<char>(bufferPtr[i]);
+                }
+                dataPtr[size - 2] = '\0'; // 使用atof需要手动添加结束符
+                INFO("Receive motor ID:%s\n", dataPtr);
+                // 设置CAN ID并且更新NVS，并进行重启
+                HAL::NVS_Init(); // 打开NVS
+                int32_t canID = atoi(dataPtr);
+                HAL::CAN_GetCurrentMotorID() = canID;
+                HAL::put_int("CAN_ID", canID);
+                HAL::NVS_End(); // 关闭NVS
+                free(dataPtr);
+                INFO("Motor system reboot Set CAN ID=0x%x\n", canID);
+                REBOOT_SYS();
+            }
+            case SET_SYSTEM_REBOOT:
+            {
+                INFO("Motor system reboot\n");
+                HAL::Motor_Disable();
+                sleep(1);
+                REBOOT_SYS();
+            }
 
-    break;
-    case GET_SYSTEM_VERSION:
-    {
-        const char *verStr = FIRMWARE_VERSION;
-        INFO("SystemVersion:%s\n", verStr);
-        break;
-    }
-    default:
-        ERR("Not match cmd(0x%x) receive data:\n", cmd);
-        for (int i = 0; i < size; i++)
-        {
-            UART_RECV_CTL().printf("0x%x ", bufferPtr[i]);
+            break;
+            case GET_SYSTEM_VERSION:
+            {
+                const char *verStr = FIRMWARE_VERSION;
+                INFO("SystemVersion:%s\n", verStr);
+                break;
+            }
+            default:
+                ERR("Not match cmd(0x%x) receive data:\n", cmd);
+                for (int i = 0; i < size; i++)
+                {
+                    UART_RECV_CTL().printf("0x%x ", bufferPtr[i]);
+                }
+                UART_RECV_CTL().printf("\n------\n");
+                break;
+            }
+            // 释放内存
+            free(bufferPtr);
+            receive_data_flag = false;
         }
-        UART_RECV_CTL().printf("\n------\n");
-        break;
+        WAIT_TASK_TIME();
     }
-    // 释放内存
-    free(bufferPtr);
 }
 /*串口输入的初始化*/
 void HAL::Uart_Receive_IRQ_Register()
 {
-    UART_RECV_CTL().onReceive(Uart_Receive_Case_Switch);
+    INFOLN("Start create Uart_Receive_Case_Switch thread");
+    xTaskCreate(Uart_Receive_Case_Switch, "UART_RECEIVE", 4096, NULL, 0, NULL);
+    UART_RECV_CTL().onReceive(Uart_Receive_ISR);
     INFOLN("Register uart receive callback complete...");
 }
